@@ -1,45 +1,57 @@
 """
 Unified LLM client for the Knowledge Base.
-Resolves task → model alias → actual model, then calls Ollama directly via LiteLLM.
+Uses LiteLLM Router in-process for retry, fallback, and model routing.
 """
 import os
 import yaml
 from pathlib import Path
-from litellm import completion, embedding
+from litellm import Router, embedding
 
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 
 
 def _load_model_config() -> dict:
-    with open(CONFIG_DIR / "models.yaml") as f:
-        return yaml.safe_load(f)
+    config_path = CONFIG_DIR / "models.yaml"
+    if not config_path.exists():
+        return {"task_models": {}}
+    with open(config_path) as f:
+        return yaml.safe_load(f) or {"task_models": {}}
 
 
 def _load_litellm_config() -> dict:
-    with open(CONFIG_DIR / "litellm_config.yaml") as f:
-        return yaml.safe_load(f)
+    config_path = CONFIG_DIR / "litellm_config.yaml"
+    if not config_path.exists():
+        return {"model_list": [], "router_settings": {}}
+    with open(config_path) as f:
+        return yaml.safe_load(f) or {}
 
 
 _config = _load_model_config()
 _litellm_config = _load_litellm_config()
 
-# Build alias → litellm_params lookup from litellm_config.yaml
+# Initialize the LiteLLM Router with full config (retries, fallbacks, etc.)
+_router_settings = _litellm_config.get("router_settings", {})
+_model_list = _litellm_config.get("model_list", [])
+
+_router = None
+if _model_list:
+    _router = Router(
+        model_list=_model_list,
+        num_retries=_router_settings.get("num_retries", 2),
+        timeout=_router_settings.get("timeout", 120),
+        allowed_fails=_router_settings.get("allowed_fails", 3),
+        cooldown_time=_router_settings.get("cooldown_time", 60),
+    )
+
+# Build alias → params lookup for embed_text (Router doesn't handle embeddings)
 _model_registry = {}
-for entry in _litellm_config.get("model_list", []):
+for entry in _model_list:
     _model_registry[entry["model_name"]] = entry["litellm_params"]
 
 
 def get_model_for_task(task: str) -> str:
     """Resolve model alias for a given task type."""
     return _config["task_models"].get(task, "local-main")
-
-
-def _resolve_model(alias: str) -> tuple[str, str]:
-    """Resolve alias to (actual_model, api_base)."""
-    params = _model_registry.get(alias, {})
-    model = params.get("model", f"ollama/gemma4")
-    api_base = params.get("api_base", "http://localhost:11434")
-    return model, api_base
 
 
 def ask(
@@ -49,36 +61,72 @@ def ask(
     temperature: float = 0.3,
     max_tokens: int = 4096,
 ) -> str:
-    """Send a prompt to the appropriate LLM based on task type."""
-    alias = get_model_for_task(task)
-    model, api_base = _resolve_model(alias)
+    """Send a prompt to the appropriate LLM via the Router."""
+    model = get_model_for_task(task)
 
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
 
-    response = completion(
-        model=model,
-        messages=messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        api_base=api_base,
-    )
+    if _router:
+        response = _router.completion(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    else:
+        # Fallback: direct call if router not configured
+        from litellm import completion
+        response = completion(
+            model="ollama/gemma4",
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            api_base="http://localhost:11434",
+        )
     return response.choices[0].message.content
 
 
 def embed_text(text: str) -> list[float]:
-    """Generate embedding vector for text using the embedding model."""
+    """Generate embedding vector for text.
+    Falls back to a simple hash-based pseudo-embedding if no embedding model available.
+    """
     alias = get_model_for_task("embed")
-    model, api_base = _resolve_model(alias)
+    params = _model_registry.get(alias, {})
+    model = params.get("model", "")
+    api_base = params.get("api_base", "http://localhost:11434")
 
-    response = embedding(
-        model=model,
-        input=[text],
-        api_base=api_base,
-    )
-    return response.data[0]["embedding"]
+    # Check if model is a real embedding model (not a chat model)
+    is_embed_model = any(kw in model.lower() for kw in ["embed", "nomic", "bge", "e5"])
+
+    if is_embed_model:
+        response = embedding(
+            model=model,
+            input=[text],
+            api_base=api_base,
+        )
+        return response.data[0]["embedding"]
+
+    # Fallback: simple bag-of-words hash embedding for chat models
+    # Not great quality but allows search to function
+    import hashlib
+    import struct
+    words = set(text.lower().split())
+    vec = [0.0] * 128
+    for word in words:
+        h = hashlib.md5(word.encode()).digest()
+        for i in range(0, 128, 4):
+            idx = i // 4
+            val = struct.unpack('f', h[idx % 16:(idx % 16) + 4])[0]
+            vec[i % 128] += val
+    # Normalize
+    norm = sum(v * v for v in vec) ** 0.5
+    if norm > 0:
+        vec = [v / norm for v in vec]
+    return vec
+
 
 MAX_CONTEXT_CHARS = 24000  # ~6K tokens, safe for most local models
 

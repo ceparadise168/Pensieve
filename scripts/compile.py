@@ -229,7 +229,51 @@ def step_4_build_index():
     click.echo(f"  Index updated: {len(articles)} articles")
 
 
-def step_5_build_graph():
+def step_5_build_glossary():
+    """Build a glossary of key terms extracted from concept articles."""
+    terms = {}
+    for md_file in (WIKI_DIR / "concepts").glob("*.md"):
+        try:
+            post = frontmatter.load(md_file)
+            title = post.get("title", md_file.stem)
+            # Use first paragraph after frontmatter as brief definition
+            content_lines = post.content.strip().split("\n")
+            # Skip heading lines to find first paragraph
+            definition = ""
+            for line in content_lines:
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#"):
+                    definition = stripped[:200]
+                    break
+            terms[title] = {
+                "slug": md_file.stem,
+                "definition": definition,
+            }
+        except Exception:
+            pass
+
+    lines = [
+        "---",
+        "title: 'Glossary'",
+        f"updated: '{datetime.now().strftime('%Y-%m-%d')}'",
+        f"total_terms: {len(terms)}",
+        "---",
+        "",
+        "# Glossary",
+        "",
+    ]
+    for term in sorted(terms.keys(), key=str.lower):
+        entry = terms[term]
+        lines.append(f"**[[{entry['slug']}|{term}]]**")
+        if entry["definition"]:
+            lines.append(f": {entry['definition']}")
+        lines.append("")
+
+    (WIKI_DIR / "_glossary.md").write_text("\n".join(lines), encoding="utf-8")
+    click.echo(f"  Glossary updated: {len(terms)} terms")
+
+
+def step_6_build_graph():
     concepts_dir = WIKI_DIR / "concepts"
     graph = {}
     for md_file in concepts_dir.glob("*.md"):
@@ -301,7 +345,7 @@ def compile_wiki(full: bool, incremental: bool, article: str):
             return
         click.echo(f"Incremental compile: {len(sources)} changed files")
 
-    click.echo("\n[Step 1/5] Summarizing sources...")
+    click.echo("\n[Step 1/6] Summarizing sources...")
     summaries = step_1_summarize_sources(sources)
 
     # Save state after summarization so successful work is not lost
@@ -309,18 +353,21 @@ def compile_wiki(full: bool, incremental: bool, article: str):
         state["file_hashes"].update(new_hashes)
         _save_state(state)
 
-    click.echo("\n[Step 2/5] Extracting concepts...")
+    click.echo("\n[Step 2/6] Extracting concepts...")
     concepts = step_2_extract_concepts(summaries)
     click.echo(f"  Found {len(concepts)} concepts")
 
-    click.echo("\n[Step 3/5] Writing concept articles...")
+    click.echo("\n[Step 3/6] Writing concept articles...")
     step_3_write_concept_articles(concepts)
 
-    click.echo("\n[Step 4/5] Building index...")
+    click.echo("\n[Step 4/6] Building index...")
     step_4_build_index()
 
-    click.echo("\n[Step 5/5] Building concept graph...")
-    step_5_build_graph()
+    click.echo("\n[Step 5/6] Building glossary...")
+    step_5_build_glossary()
+
+    click.echo("\n[Step 6/6] Building concept graph...")
+    step_6_build_graph()
 
     _save_state(state)
     click.echo(f"\nCompilation complete. Wiki: {WIKI_DIR}")

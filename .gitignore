@@ -2,7 +2,10 @@
 .env
 .compile_state.json
 .search_index.json
+.keyword_index.json
+.embed_index.json
 node_modules/
 __pycache__/
 raw/repos/*/
 *.pyc
+.DS_Store
