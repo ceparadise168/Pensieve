@@ -1,7 +1,7 @@
-# LLM Knowledge Base — Agent Instructions
+# Kiln — Agent Instructions
 
 ## What is this project?
-A personal knowledge base where raw sources are compiled by LLMs into a structured wiki.
+Kiln is a self-maintaining, LLM-compiled personal knowledge base.
 Human curates sources into `raw/`. LLM compiles `wiki/`. Human reads in Obsidian.
 
 ## Key rules

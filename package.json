@@ -1,0 +1,11 @@
+{
+  "name": "kiln-kb",
+  "version": "0.1.0",
+  "description": "A self-maintaining, LLM-compiled personal knowledge base",
+  "scripts": {},
+  "keywords": ["llm", "knowledge-base", "obsidian", "wiki"],
+  "license": "MIT",
+  "devDependencies": {
+    "@marp-team/marp-cli": "^4.3.1"
+  }
+}

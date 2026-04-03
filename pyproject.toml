@@ -1,8 +1,11 @@
 [project]
-name = "llm-knowledge-base"
+name = "kiln-kb"
 version = "0.1.0"
 description = "A self-maintaining, LLM-compiled personal knowledge base"
+license = "MIT"
+readme = "README.md"
 requires-python = ">=3.11"
+keywords = ["llm", "knowledge-base", "obsidian", "wiki", "rag"]
 dependencies = [
     "litellm",
     "openai",
