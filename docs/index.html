@@ -22,16 +22,16 @@
       --mono: 'JetBrains Mono', 'Fira Code', monospace;
     }
 
-    /* ── Light mode ── */
+    /* ── Light mode (Anthropic-inspired warm cream) ── */
     body.light {
-      --bg: #f5f2ed;
-      --surface: rgba(230, 222, 210, 0.55);
-      --border: rgba(160, 140, 110, 0.15);
-      --text: #2c2418;
-      --text-dim: #8a7e6e;
+      --bg: #faf8f4;
+      --surface: rgba(235, 228, 216, 0.45);
+      --border: rgba(140, 120, 90, 0.12);
+      --text: #191918;
+      --text-dim: #6b6560;
       --accent: #4a7a9c;
-      --gold: #9e7c38;
-      --glow: rgba(74, 122, 156, 0.08);
+      --gold: #96783a;
+      --glow: rgba(150, 120, 58, 0.06);
     }
     body.light::before { opacity: 0; }
     body.light .basin .swirl-1 {
@@ -50,13 +50,22 @@
       background: radial-gradient(ellipse at 35% 40%, rgba(196,163,90,0.12) 0%, transparent 50%),
                   radial-gradient(ellipse at 65% 60%, rgba(180,150,80,0.1) 0%, transparent 40%);
     }
-    body.light .terminal, body.light .terminal-header { background: #eae5dd; }
+    body.light .terminal { background: #f0ece4; border-color: rgba(140,120,90,0.15); }
+    body.light .terminal-header { background: #e8e2d8; border-color: rgba(140,120,90,0.1); }
     body.light .terminal-body .comment { color: #a89880; }
+    body.light .terminal-body .cmd { color: #5a4a2a; }
+    body.light .terminal-body .flag { color: #96783a; }
+    body.light .terminal-body code { color: #3a3530; }
     body.light .feature-cell { background: var(--bg); }
-    body.light .feature-cell:hover { background: rgba(230,222,210,0.6); }
-    body.light .feature-cell .cell-num { color: rgba(74,122,156,0.15); }
-    body.light .models-table tbody tr:hover { background: rgba(74,122,156,0.04); }
-    body.light .models-table td code { background: rgba(74,122,156,0.08); }
+    body.light .feature-cell:hover { background: #f3efe7; }
+    body.light .feature-cell .cell-num { color: rgba(150,120,58,0.18); }
+    body.light .features { background: rgba(140,120,90,0.1); }
+    body.light .comparison-card { background: rgba(235,228,216,0.4); }
+    body.light .flow-step { background: rgba(235,228,216,0.4); }
+    body.light .models-table tbody tr:hover { background: rgba(150,120,58,0.04); }
+    body.light .models-table td code { color: #5a4a2a; background: rgba(150,120,58,0.08); }
+    body.light nav { background: rgba(250,248,244,0.8); }
+    body.light .basin .rim { border-color: rgba(150,120,58,0.08); box-shadow: 0 0 60px rgba(150,120,58,0.04); }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -572,7 +581,7 @@
     }
   </style>
 </head>
-<body class="en">
+<body class="en light">
 
 <nav>
   <div class="logo">Pensieve</div>
@@ -581,7 +590,7 @@
     <a class="lang-en" href="#features">Features</a><a class="lang-zh" href="#features">功能</a>
     <a class="lang-en" href="#start">Start</a><a class="lang-zh" href="#start">開始</a>
     <a href="https://github.com/ceparadise168/Pensieve">GitHub</a>
-    <button class="nav-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">&#9790;</button>
+    <button class="nav-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">&#9788;</button>
     <button class="nav-btn" onclick="toggleLang()">ZH</button>
   </div>
 </nav>
@@ -888,7 +897,8 @@ function toggleTheme() {
   var body = document.body;
   var btn = document.getElementById('theme-btn');
   body.classList.toggle('light');
-  btn.textContent = body.classList.contains('light') ? '\u263E' : '\u263D';
+  /* Sun = currently light (click to go dark), Moon = currently dark (click to go light) */
+  btn.textContent = body.classList.contains('light') ? '\u2604' : '\u263D';
 }
 
 /* Scroll reveal */
