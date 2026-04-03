@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# tools/kb — Main CLI entry point for the Knowledge Base
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+VENV="$PROJECT_ROOT/.venv"
+
+# Activate virtualenv
+if [ -f "$VENV/bin/activate" ]; then
+    source "$VENV/bin/activate"
+fi
+
+export PYTHONPATH="$PROJECT_ROOT/scripts:${PYTHONPATH:-}"
+
+COMMAND="${1:-help}"
+shift || true
+
+case "$COMMAND" in
+    ingest)
+        python "$PROJECT_ROOT/scripts/ingest.py" "$@"
+        ;;
+    compile)
+        python "$PROJECT_ROOT/scripts/compile.py" "$@"
+        ;;
+    query)
+        python "$PROJECT_ROOT/scripts/query.py" "$@"
+        ;;
+    lint)
+        python "$PROJECT_ROOT/scripts/lint.py" "$@"
+        ;;
+    search)
+        python "$PROJECT_ROOT/scripts/search.py" "$@"
+        ;;
+    serve)
+        python "$PROJECT_ROOT/scripts/search.py" --serve "$@"
+        ;;
+    status)
+        echo "=== Knowledge Base Status ==="
+        echo "Raw sources:  $(find "$PROJECT_ROOT/raw" -name '*.md' | wc -l) files"
+        echo "Wiki articles: $(find "$PROJECT_ROOT/wiki/concepts" -name '*.md' 2>/dev/null | wc -l) articles"
+        echo "Summaries:    $(find "$PROJECT_ROOT/wiki/summaries" -name '*.md' 2>/dev/null | wc -l) summaries"
+        echo "Outputs:      $(find "$PROJECT_ROOT/output" -type f 2>/dev/null | wc -l) files"
+        if command -v ollama &>/dev/null; then
+            echo "Ollama:       $(ollama list 2>/dev/null | tail -n +2 | wc -l) models loaded"
+        fi
+        ;;
+    help|--help|-h)
+        echo "Usage: kb <command> [args]"
+        echo ""
+        echo "Commands:"
+        echo "  ingest <url|file|repo>     Add a new source to the knowledge base"
+        echo "  compile [--full|--incremental]  Compile wiki from raw sources"
+        echo "  query 'question' [--output text|report|slides]  Ask a question"
+        echo "  lint [--check|--fix|--suggest]  Run wiki health checks"
+        echo "  search 'terms' [--semantic]     Search the wiki"
+        echo "  serve [--port 8080]             Start search web UI"
+        echo "  status                          Show knowledge base stats"
+        ;;
+    *)
+        echo "Unknown command: $COMMAND"
+        echo "Run 'kb help' for usage."
+        exit 1
+        ;;
+esac
