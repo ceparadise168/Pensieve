@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pensieve — LLM-Compiled Knowledge Base</title>
+  <meta name="description" content="A self-maintaining, LLM-compiled personal knowledge base. Human curates sources, LLM compiles the wiki, human reads in Obsidian.">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #e0dfe4;
+      --text-dim: #8887a0;
+      --accent: #9d8ce8;
+      --accent-glow: rgba(157, 140, 232, 0.15);
+      --accent2: #6ec6d0;
+      --code-bg: #181825;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.8rem 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    nav .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); letter-spacing: 0.5px; }
+    nav .links { display: flex; gap: 1.5rem; }
+    nav .links a {
+      color: var(--text-dim); text-decoration: none; font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    nav .links a:hover { color: var(--accent); }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      text-align: center;
+      padding: 6rem 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(ellipse at 50% 40%, var(--accent-glow) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+    .hero .subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      color: var(--text-dim);
+      max-width: 600px;
+      margin-bottom: 1rem;
+    }
+    .hero .quote {
+      font-style: italic;
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      max-width: 550px;
+      margin-bottom: 3rem;
+      opacity: 0.7;
+    }
+    .hero .quote em { color: var(--accent); font-style: normal; }
+    .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.8rem 1.8rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0a0f;
+    }
+    .btn-primary:hover { background: #b0a0f0; transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Sections ── */
+    section { padding: 5rem 2rem; max-width: 1000px; margin: 0 auto; }
+    section h2 {
+      font-size: 2rem; font-weight: 700; margin-bottom: 1rem;
+      letter-spacing: -0.5px;
+    }
+    section h2 span { color: var(--accent); }
+    section .section-desc { color: var(--text-dim); font-size: 1.05rem; margin-bottom: 3rem; max-width: 650px; }
+
+    /* ── Flow diagram ── */
+    .flow {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; flex-wrap: wrap;
+      margin: 3rem 0;
+    }
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      width: 200px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .flow-step:hover { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow); }
+    .flow-step .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .flow-step h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+    .flow-step p { font-size: 0.8rem; color: var(--text-dim); line-height: 1.4; }
+    .flow-arrow {
+      font-size: 1.5rem; color: var(--text-dim); padding: 0 0.5rem;
+      user-select: none;
+    }
+
+    /* ── Features grid ── */
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.8rem;
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    }
+    .feature-card:hover { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow); transform: translateY(-2px); }
+    .feature-card .card-icon { font-size: 1.5rem; margin-bottom: 0.8rem; }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+
+    /* ── Code block ── */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      overflow-x: auto;
+      margin: 1.5rem 0;
+    }
+    .code-block code {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: var(--text);
+    }
+    .code-block .comment { color: #5c5c7a; }
+    .code-block .cmd { color: var(--accent2); }
+    .code-block .flag { color: var(--accent); }
+
+    /* ── Comparison ── */
+    .comparison {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .comparison-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .comparison-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+    .comparison-card.old h3 { color: #e06c75; }
+    .comparison-card.new h3 { color: var(--accent2); }
+    .comparison-card .steps { list-style: none; }
+    .comparison-card .steps li {
+      padding: 0.4rem 0;
+      font-size: 0.9rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .comparison-card .steps li::before { font-size: 0.8rem; }
+    .comparison-card.old .steps li::before { content: '\2192'; color: #e06c75; }
+    .comparison-card.new .steps li::before { content: '\2192'; color: var(--accent2); }
+
+    /* ── Models table ── */
+    .models-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+    .models-table th, .models-table td {
+      text-align: left;
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .models-table th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .models-table td code { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); background: var(--code-bg); padding: 0.15rem 0.4rem; border-radius: 4px; }
+    .models-table tr:hover td { background: rgba(157, 140, 232, 0.03); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    footer .credits { margin-top: 0.5rem; opacity: 0.6; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+      .comparison { grid-template-columns: 1fr; }
+      nav .links { gap: 1rem; }
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav>
+  <div class="logo">Pensieve</div>
+  <div class="links">
+    <a href="#how">How it Works</a>
+    <a href="#features">Features</a>
+    <a href="#start">Quick Start</a>
+    <a href="https://github.com/ceparadise168/Pensieve">GitHub</a>
+  </div>
+</nav>
+
+<!-- ════ Hero ════ -->
+<div class="hero">
+  <h1>Pensieve</h1>
+  <p class="subtitle">A self-maintaining, LLM-compiled personal knowledge base.</p>
+  <p class="quote">
+    "<em>One simply siphons the excess thoughts from one's mind,
+    pours them into the basin, and examines them at one's leisure.</em>"
+    <br>— Albus Dumbledore
+  </p>
+  <div class="cta-group">
+    <a href="https://github.com/ceparadise168/Pensieve" class="btn btn-primary">
+      View on GitHub
+    </a>
+    <a href="#start" class="btn btn-secondary">Quick Start</a>
+  </div>
+</div>
+
+<!-- ════ How it Works ════ -->
+<section id="how">
+  <h2>How it <span>Works</span></h2>
+  <p class="section-desc">
+    You curate the sources. The LLM does everything else &mdash; reading, summarizing, organizing, linking, and answering your questions.
+  </p>
+
+  <div class="comparison">
+    <div class="comparison-card old">
+      <h3>Traditional PKM</h3>
+      <ul class="steps">
+        <li>Human reads the source</li>
+        <li>Human writes summaries</li>
+        <li>Human organizes and tags</li>
+        <li>Human maintains links</li>
+        <li>Human searches manually</li>
+      </ul>
+    </div>
+    <div class="comparison-card new">
+      <h3>Pensieve</h3>
+      <ul class="steps">
+        <li>Human curates sources</li>
+        <li>LLM summarizes everything</li>
+        <li>LLM writes wiki articles</li>
+        <li>LLM builds index and graph</li>
+        <li>LLM answers your questions</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="icon">&#128220;</div>
+      <h3>raw/</h3>
+      <p>Articles, papers, repos, datasets curated by you</p>
+    </div>
+    <div class="flow-arrow">&#10230;</div>
+    <div class="flow-step">
+      <div class="icon">&#9881;</div>
+      <h3>LLM Compile</h3>
+      <p>Summarize, extract concepts, write articles, build index</p>
+    </div>
+    <div class="flow-arrow">&#10230;</div>
+    <div class="flow-step">
+      <div class="icon">&#128214;</div>
+      <h3>wiki/</h3>
+      <p>Structured knowledge base you browse in Obsidian</p>
+    </div>
+    <div class="flow-arrow">&#10230;</div>
+    <div class="flow-step">
+      <div class="icon">&#128161;</div>
+      <h3>Query</h3>
+      <p>Ask questions, get reports, slides, and insights</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════ Features ════ -->
+<section id="features">
+  <h2>What you <span>get</span></h2>
+  <p class="section-desc">Everything you need to build a living, growing knowledge base powered by local LLMs.</p>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="card-icon">&#128229;</div>
+      <h3>Smart Ingest</h3>
+      <p>Ingest URLs, PDFs, markdown files, and entire Git repos. Auto-downloads images and generates metadata.</p>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">&#9881;</div>
+      <h3>6-Step Compiler</h3>
+      <p>Summarize &rarr; Extract concepts &rarr; Write articles &rarr; Build index &rarr; Glossary &rarr; Concept graph. Fully automated.</p>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">&#128172;</div>
+      <h3>Q&A Engine</h3>
+      <p>Ask natural language questions. Get answers as text, research reports, or Marp slide decks.</p>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">&#128269;</div>
+      <h3>Search</h3>
+      <p>Keyword and semantic search with a built-in web UI. Cached indexes for instant results.</p>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">&#128736;</div>
+      <h3>Wiki Linter</h3>
+      <p>Find broken links, orphaned articles, missing frontmatter. Auto-fix issues and get LLM-powered improvement suggestions.</p>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">&#127760;</div>
+      <h3>100% Local</h3>
+      <p>Runs entirely on your machine with Ollama. No data leaves your computer. Cloud APIs available as optional fallback.</p>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">&#128142;</div>
+      <h3>Obsidian Native</h3>
+      <p>Browse your wiki in Obsidian with graph view, Dataview dashboard, and Marp slides. Beautiful by default.</p>
+    </div>
+    <div class="feature-card">
+      <div class="card-icon">&#128260;</div>
+      <h3>Feedback Loop</h3>
+      <p>Query results file back into the wiki. Your explorations compound &mdash; the knowledge base grows with every question.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════ Quick Start ════ -->
+<section id="start">
+  <h2>Quick <span>Start</span></h2>
+  <p class="section-desc">From zero to a working knowledge base in under 5 minutes.</p>
+
+  <div class="code-block"><code><span class="comment"># Clone and set up</span>
+<span class="cmd">git clone</span> https://github.com/ceparadise168/Pensieve.git
+<span class="cmd">cd</span> Pensieve
+<span class="cmd">bash</span> scripts/bootstrap.sh
+
+<span class="comment"># Start Ollama</span>
+<span class="cmd">ollama</span> serve
+
+<span class="comment"># Ingest your first source</span>
+<span class="cmd">./tools/kb</span> ingest url <span class="flag">"https://example.com/article"</span>
+
+<span class="comment"># Compile the wiki</span>
+<span class="cmd">./tools/kb</span> compile <span class="flag">--full</span>
+
+<span class="comment"># Open in Obsidian &mdash; select this directory as vault</span>
+
+<span class="comment"># Ask questions</span>
+<span class="cmd">./tools/kb</span> query <span class="flag">"What are the key concepts?"</span>
+
+<span class="comment"># Generate a presentation</span>
+<span class="cmd">./tools/kb</span> query <span class="flag">"Overview of main themes"</span> --output slides</code></div>
+</section>
+
+<!-- ════ Models ════ -->
+<section id="models">
+  <h2>Recommended <span>Models</span></h2>
+  <p class="section-desc">Runs on Apple Silicon with local Ollama models. No GPU required.</p>
+
+  <table class="models-table">
+    <thead>
+      <tr><th>Task</th><th>Model</th><th>Size</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Fast</td><td><code>qwen2.5:3b</code></td><td>~2 GB</td><td>Summarization, tagging, simple extraction</td></tr>
+      <tr><td>Main</td><td><code>gemma4</code></td><td>~10 GB</td><td>Article writing, Q&A, linting</td></tr>
+      <tr><td>Main (alt)</td><td><code>qwen3:14b</code></td><td>~12 GB</td><td>Hybrid thinking mode</td></tr>
+      <tr><td>Complex</td><td><code>deepseek-r1:32b</code></td><td>~24 GB</td><td>Multi-hop reasoning with chain-of-thought</td></tr>
+      <tr><td>Embeddings</td><td><code>nomic-embed-text</code></td><td>~0.3 GB</td><td>Semantic search vectors</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ════ Footer ════ -->
+<footer>
+  <p>
+    Inspired by <a href="https://x.com/karpathy/status/2039805659525644595">Andrej Karpathy's LLM Knowledge Bases</a>.
+    Built with <a href="https://github.com/BerriAI/litellm">LiteLLM</a>,
+    <a href="https://ollama.com">Ollama</a>, and
+    <a href="https://obsidian.md">Obsidian</a>.
+  </p>
+  <p class="credits">MIT License &middot; <a href="https://github.com/ceparadise168/Pensieve">ceparadise168/Pensieve</a></p>
+</footer>
+
+</body>
+</html>
