@@ -5,209 +5,492 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pensieve — LLM-Compiled Knowledge Base</title>
   <meta name="description" content="A self-maintaining, LLM-compiled personal knowledge base. Human curates sources, LLM compiles the wiki, human reads in Obsidian.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --border: #1e1e2e;
-      --text: #e0dfe4;
-      --text-dim: #8887a0;
-      --accent: #9d8ce8;
-      --accent-glow: rgba(157, 140, 232, 0.15);
-      --accent2: #6ec6d0;
-      --code-bg: #181825;
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+      --bg: #080c14;
+      --surface: rgba(12, 22, 40, 0.55);
+      --border: rgba(122, 162, 196, 0.1);
+      --text: #c8d4e2;
+      --text-dim: #5d6f82;
+      --accent: #7aa2c4;
+      --gold: #c4a35a;
+      --glow: rgba(122, 162, 196, 0.12);
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --sans: 'Outfit', -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
+
     body {
-      font-family: var(--font);
+      font-family: var(--sans);
       background: var(--bg);
       color: var(--text);
       line-height: 1.7;
-      -webkit-font-smoothing: antialiased;
+      font-weight: 300;
+      overflow-x: hidden;
+    }
+
+    /* ── Stars background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(200,212,226,0.4), transparent),
+        radial-gradient(1px 1px at 30% 65%, rgba(200,212,226,0.3), transparent),
+        radial-gradient(1px 1px at 55% 15%, rgba(200,212,226,0.25), transparent),
+        radial-gradient(1px 1px at 70% 80%, rgba(200,212,226,0.35), transparent),
+        radial-gradient(1.5px 1.5px at 85% 40%, rgba(196,163,90,0.4), transparent),
+        radial-gradient(1px 1px at 15% 85%, rgba(200,212,226,0.2), transparent),
+        radial-gradient(1px 1px at 45% 45%, rgba(200,212,226,0.3), transparent),
+        radial-gradient(1px 1px at 92% 10%, rgba(200,212,226,0.2), transparent),
+        radial-gradient(1px 1px at 5% 50%, rgba(196,163,90,0.3), transparent),
+        radial-gradient(1px 1px at 65% 55%, rgba(200,212,226,0.15), transparent),
+        radial-gradient(1px 1px at 38% 90%, rgba(200,212,226,0.3), transparent),
+        radial-gradient(1px 1px at 80% 25%, rgba(200,212,226,0.2), transparent);
+      pointer-events: none;
     }
 
     /* ── Nav ── */
     nav {
       position: fixed; top: 0; width: 100%; z-index: 100;
-      background: rgba(10, 10, 15, 0.85);
-      backdrop-filter: blur(16px);
+      background: rgba(8, 12, 20, 0.7);
+      backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
-      padding: 0.8rem 2rem;
+      padding: 1rem 2.5rem;
       display: flex; justify-content: space-between; align-items: center;
     }
-    nav .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); letter-spacing: 0.5px; }
-    nav .links { display: flex; gap: 1.5rem; align-items: center; }
+    nav .logo {
+      font-family: var(--serif);
+      font-weight: 700; font-size: 1.3rem;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    nav .links { display: flex; gap: 2rem; align-items: center; }
     nav .links a {
-      color: var(--text-dim); text-decoration: none; font-size: 0.9rem;
-      transition: color 0.2s;
+      color: var(--text-dim); text-decoration: none;
+      font-size: 0.8rem; font-weight: 400;
+      letter-spacing: 1px; text-transform: uppercase;
+      transition: color 0.3s;
     }
     nav .links a:hover { color: var(--accent); }
     .lang-switch {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text-dim); padding: 0.3rem 0.7rem; border-radius: 6px;
-      font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-family: var(--sans);
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.3s;
     }
-    .lang-switch:hover { border-color: var(--accent); color: var(--accent); }
+    .lang-switch:hover { border-color: var(--gold); color: var(--gold); }
 
     /* ── Hero ── */
     .hero {
       min-height: 100vh;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
       text-align: center;
-      padding: 6rem 2rem 4rem;
+      padding: 8rem 2rem 6rem;
       position: relative;
-      overflow: hidden;
     }
-    .hero::before {
-      content: '';
+
+    /* Basin ripple effect */
+    .basin {
       position: absolute;
-      top: -50%; left: -50%; width: 200%; height: 200%;
-      background: radial-gradient(ellipse at 50% 40%, var(--accent-glow) 0%, transparent 60%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px; height: 600px;
       pointer-events: none;
     }
+    .basin .ripple {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(122, 162, 196, 0.08);
+      animation: ripple 6s ease-out infinite;
+    }
+    .basin .ripple:nth-child(2) { animation-delay: 1.5s; }
+    .basin .ripple:nth-child(3) { animation-delay: 3s; }
+    .basin .ripple:nth-child(4) { animation-delay: 4.5s; }
+    @keyframes ripple {
+      0% { transform: scale(0.3); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    /* Basin glow */
+    .basin::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(122,162,196,0.15) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite alternate;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+    }
+
     .hero h1 {
-      font-size: clamp(3rem, 8vw, 5.5rem);
-      font-weight: 800;
-      letter-spacing: -2px;
-      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 1.5rem;
+      font-family: var(--serif);
+      font-size: clamp(4rem, 10vw, 7rem);
+      font-weight: 700;
+      letter-spacing: 6px;
+      color: var(--text);
       position: relative;
+      margin-bottom: 2rem;
+    }
+    .hero h1::after {
+      content: '';
+      display: block;
+      width: 60px; height: 1px;
+      background: var(--gold);
+      margin: 1.5rem auto 0;
     }
     .hero .subtitle {
-      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      font-family: var(--sans);
+      font-size: 1.1rem;
+      font-weight: 300;
       color: var(--text-dim);
-      max-width: 600px;
-      margin-bottom: 1rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      max-width: 550px;
+      margin-bottom: 2.5rem;
     }
     .hero .quote {
+      font-family: var(--serif);
       font-style: italic;
       color: var(--text-dim);
-      font-size: 0.95rem;
-      max-width: 550px;
-      margin-bottom: 3rem;
-      opacity: 0.7;
+      font-size: 1.15rem;
+      max-width: 480px;
+      margin-bottom: 3.5rem;
+      line-height: 1.8;
     }
-    .hero .quote .highlight { color: var(--accent); font-style: normal; }
-    .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .hero .quote .highlight { color: var(--gold); font-style: normal; }
+    .hero .quote .attr {
+      display: block;
+      font-size: 0.85rem;
+      margin-top: 0.8rem;
+      font-style: normal;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      opacity: 0.6;
+    }
+
+    .cta-group { display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; position: relative; }
     .btn {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.8rem 1.8rem;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 600;
+      padding: 0.9rem 2.2rem;
+      border-radius: 2px;
+      font-family: var(--sans);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
       text-decoration: none;
-      transition: all 0.2s;
+      transition: all 0.3s;
     }
-    .btn-primary { background: var(--accent); color: #0a0a0f; }
-    .btn-primary:hover { background: #b0a0f0; transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
-    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-primary {
+      background: var(--gold);
+      color: var(--bg);
+    }
+    .btn-primary:hover { background: #d4b36a; box-shadow: 0 0 30px rgba(196,163,90,0.2); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
     .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── Sections ── */
-    section { padding: 5rem 2rem; max-width: 1000px; margin: 0 auto; }
-    section h2 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.5px; }
-    section h2 .hl { color: var(--accent); }
-    section .section-desc { color: var(--text-dim); font-size: 1.05rem; margin-bottom: 3rem; max-width: 650px; }
+    section {
+      padding: 6rem 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .section-label {
+      font-family: var(--sans);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+    section h2 {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.2rem;
+      line-height: 1.2;
+    }
+    section .section-desc {
+      color: var(--text-dim);
+      font-size: 1rem;
+      font-weight: 300;
+      margin-bottom: 3.5rem;
+      max-width: 500px;
+      line-height: 1.8;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      width: 100%; max-width: 1000px;
+      margin: 0 auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--border) 50%, transparent 100%);
+    }
+
+    /* ── Comparison ── */
+    .comparison {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 2rem; margin: 0 0 4rem;
+    }
+    .comparison-card {
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 2rem;
+    }
+    .comparison-card h3 {
+      font-family: var(--sans);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+    .comparison-card.old h3 { color: #8b6b6e; }
+    .comparison-card.new h3 { color: var(--accent); }
+    .comparison-card .steps { list-style: none; }
+    .comparison-card .steps li {
+      padding: 0.5rem 0;
+      font-size: 0.9rem;
+      font-weight: 300;
+      display: flex; align-items: center; gap: 0.8rem;
+      color: var(--text);
+    }
+    .comparison-card .steps li::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .comparison-card.old .steps li::before { background: #8b6b6e; }
+    .comparison-card.new .steps li::before { background: var(--accent); }
 
     /* ── Flow ── */
     .flow {
-      display: flex; align-items: center; justify-content: center;
-      gap: 0; flex-wrap: wrap; margin: 3rem 0;
+      display: flex; align-items: stretch; justify-content: center;
+      gap: 0; flex-wrap: wrap;
     }
     .flow-step {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-      padding: 1.5rem; text-align: center; width: 200px;
-      transition: border-color 0.3s, box-shadow 0.3s;
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      width: 200px;
+      transition: border-color 0.4s, box-shadow 0.4s;
     }
-    .flow-step:hover { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow); }
-    .flow-step .icon { font-size: 2rem; margin-bottom: 0.5rem; }
-    .flow-step h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
-    .flow-step p { font-size: 0.8rem; color: var(--text-dim); line-height: 1.4; }
-    .flow-arrow { font-size: 1.5rem; color: var(--text-dim); padding: 0 0.5rem; user-select: none; }
+    .flow-step:hover {
+      border-color: rgba(122,162,196,0.3);
+      box-shadow: 0 0 40px var(--glow);
+    }
+    .flow-step .icon {
+      font-size: 1.8rem; margin-bottom: 1rem;
+      filter: grayscale(0.3);
+    }
+    .flow-step h3 {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+    }
+    .flow-step p { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; font-weight: 300; }
+    .flow-arrow {
+      display: flex; align-items: center;
+      color: var(--text-dim); padding: 0 0.8rem;
+      font-size: 1.2rem; opacity: 0.3;
+    }
 
     /* ── Features ── */
-    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
-    .feature-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.8rem;
-      transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
     }
-    .feature-card:hover { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow); transform: translateY(-2px); }
-    .feature-card .card-icon { font-size: 1.5rem; margin-bottom: 0.8rem; }
-    .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
-    .feature-card p { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
-
-    /* ── Code ── */
-    .code-block {
-      background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px;
-      padding: 1.5rem 2rem; overflow-x: auto; margin: 1.5rem 0;
+    .feature-cell {
+      background: var(--bg);
+      padding: 2.5rem;
+      transition: background 0.4s;
     }
-    .code-block code { font-family: var(--mono); font-size: 0.85rem; line-height: 1.8; color: var(--text); }
-    .code-block .comment { color: #5c5c7a; }
-    .code-block .cmd { color: var(--accent2); }
-    .code-block .flag { color: var(--accent); }
+    .feature-cell:hover { background: rgba(12, 22, 40, 0.8); }
+    .feature-cell .cell-num {
+      font-family: var(--serif);
+      font-size: 2rem;
+      font-weight: 600;
+      color: rgba(122,162,196,0.12);
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+    .feature-cell h3 {
+      font-family: var(--serif);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.6rem;
+    }
+    .feature-cell p {
+      font-size: 0.85rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
 
-    /* ── Comparison ── */
-    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2rem 0; }
-    .comparison-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
-    .comparison-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
-    .comparison-card.old h3 { color: #e06c75; }
-    .comparison-card.new h3 { color: var(--accent2); }
-    .comparison-card .steps { list-style: none; }
-    .comparison-card .steps li { padding: 0.4rem 0; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
-    .comparison-card.old .steps li::before { content: '\2192'; color: #e06c75; }
-    .comparison-card.new .steps li::before { content: '\2192'; color: var(--accent2); }
+    /* ── Terminal ── */
+    .terminal {
+      background: #0a0e16;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 2rem 0;
+    }
+    .terminal-header {
+      background: rgba(12, 22, 40, 0.8);
+      padding: 0.8rem 1.2rem;
+      display: flex; gap: 6px; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .terminal-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(122,162,196,0.2);
+    }
+    .terminal-body {
+      padding: 1.5rem 2rem;
+      overflow-x: auto;
+    }
+    .terminal-body code {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 2;
+      color: var(--text);
+    }
+    .terminal-body .comment { color: #3d4f63; }
+    .terminal-body .cmd { color: var(--accent); }
+    .terminal-body .flag { color: var(--gold); }
 
     /* ── Table ── */
-    .models-table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.9rem; }
-    .models-table th, .models-table td { text-align: left; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); }
-    .models-table th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
-    .models-table td code { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); background: var(--code-bg); padding: 0.15rem 0.4rem; border-radius: 4px; }
-    .models-table tr:hover td { background: rgba(157, 140, 232, 0.03); }
+    .models-table {
+      width: 100%; border-collapse: collapse;
+      margin: 2rem 0; font-size: 0.85rem;
+    }
+    .models-table th, .models-table td {
+      text-align: left;
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .models-table th {
+      color: var(--text-dim);
+      font-weight: 500;
+      font-size: 0.7rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .models-table td { font-weight: 300; }
+    .models-table td code {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: rgba(122,162,196,0.06);
+      padding: 0.2rem 0.5rem;
+      border-radius: 2px;
+    }
+    .models-table tbody tr { transition: background 0.3s; }
+    .models-table tbody tr:hover { background: rgba(122,162,196,0.03); }
 
     /* ── Footer ── */
-    footer { border-top: 1px solid var(--border); padding: 3rem 2rem; text-align: center; color: var(--text-dim); font-size: 0.85rem; }
-    footer a { color: var(--accent); text-decoration: none; }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 4rem 2rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      font-weight: 300;
+      position: relative;
+    }
+    footer a { color: var(--gold); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
-    footer .credits { margin-top: 0.5rem; opacity: 0.6; }
+    footer .footer-logo {
+      font-family: var(--serif);
+      font-size: 1rem;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      opacity: 0.4;
+    }
+    footer .credits { margin-top: 0.8rem; opacity: 0.5; }
 
-    /* ── Lang toggle ── */
-    /* Hide all lang elements by default with high specificity */
+    /* ── Scroll reveal ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Language toggle ── */
     [class~="lang-en"], [class~="lang-zh"] { display: none !important; }
-    /* Show active language */
     body.en [class~="lang-en"] { display: revert !important; }
     body.zh [class~="lang-zh"] { display: revert !important; }
-    /* Inline elements stay inline */
     body.en span.lang-en, body.en a.lang-en { display: inline !important; }
     body.zh span.lang-zh, body.zh a.lang-zh { display: inline !important; }
-    /* List items need flex for the arrow ::before */
     body.en li.lang-en { display: flex !important; }
     body.zh li.lang-zh { display: flex !important; }
 
+    /* ── Responsive ── */
     @media (max-width: 700px) {
-      .flow { flex-direction: column; }
-      .flow-arrow { transform: rotate(90deg); }
+      nav { padding: 0.8rem 1.2rem; }
+      nav .links { gap: 1rem; }
+      .basin { width: 350px; height: 350px; }
+      .hero h1 { letter-spacing: 3px; }
       .comparison { grid-template-columns: 1fr; }
-      nav .links { gap: 0.8rem; }
+      .flow { flex-direction: column; align-items: center; }
+      .flow-arrow { transform: rotate(90deg); padding: 0.5rem; }
+      .features { grid-template-columns: 1fr; }
+      section { padding: 4rem 1.5rem; }
     }
   </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 </head>
 <body class="en">
 
 <nav>
   <div class="logo">Pensieve</div>
   <div class="links">
-    <a class="lang-en" href="#how">How it Works</a><a class="lang-zh" href="#how">運作方式</a>
-    <a class="lang-en" href="#features">Features</a><a class="lang-zh" href="#features">功能特色</a>
-    <a class="lang-en" href="#start">Quick Start</a><a class="lang-zh" href="#start">快速開始</a>
+    <a class="lang-en" href="#how">Process</a><a class="lang-zh" href="#how">運作</a>
+    <a class="lang-en" href="#features">Features</a><a class="lang-zh" href="#features">功能</a>
+    <a class="lang-en" href="#start">Start</a><a class="lang-zh" href="#start">開始</a>
     <a href="https://github.com/ceparadise168/Pensieve">GitHub</a>
     <button class="lang-switch" onclick="toggleLang()">ZH</button>
   </div>
@@ -215,21 +498,31 @@
 
 <!-- ════ Hero ════ -->
 <div class="hero">
+  <div class="basin">
+    <div class="ripple"></div>
+    <div class="ripple"></div>
+    <div class="ripple"></div>
+    <div class="ripple"></div>
+  </div>
+
   <h1>Pensieve</h1>
-  <p class="subtitle lang-en">A self-maintaining, LLM-compiled personal knowledge base.</p>
-  <p class="subtitle lang-zh">自我維護、由 LLM 編譯的個人知識庫。</p>
+
+  <p class="subtitle lang-en">LLM-compiled personal knowledge base</p>
+  <p class="subtitle lang-zh">由 LLM 編譯的個人知識庫</p>
+
   <p class="quote lang-en">
-    "<span class="highlight">One simply siphons the excess thoughts from one's mind,
-    pours them into the basin, and examines them at one's leisure.</span>"
-    <br>— Albus Dumbledore
+    <span class="highlight">"One simply siphons the excess thoughts from one's mind,
+    pours them into the basin, and examines them at one's leisure."</span>
+    <span class="attr">— Albus Dumbledore</span>
   </p>
   <p class="quote lang-zh">
-    「<span class="highlight">只需將多餘的思緒從腦中抽出，倒入冥想盆中，便能從容地細細檢視。</span>」
-    <br>— 阿不思．鄧不利多
+    <span class="highlight">「只需將多餘的思緒從腦中抽出，倒入冥想盆中，便能從容地細細檢視。」</span>
+    <span class="attr">— 阿不思．鄧不利多</span>
   </p>
+
   <div class="cta-group">
     <a href="https://github.com/ceparadise168/Pensieve" class="btn btn-primary">
-      <span class="lang-en">View on GitHub</span><span class="lang-zh">GitHub 原始碼</span>
+      <span class="lang-en">View Source</span><span class="lang-zh">查看原始碼</span>
     </a>
     <a href="#start" class="btn btn-secondary">
       <span class="lang-en">Quick Start</span><span class="lang-zh">快速開始</span>
@@ -237,14 +530,20 @@
   </div>
 </div>
 
+<div class="divider"></div>
+
 <!-- ════ How it Works ════ -->
 <section id="how">
-  <h2 class="lang-en">How it <span class="hl">Works</span></h2>
-  <h2 class="lang-zh"><span class="hl">運作</span>方式</h2>
-  <p class="section-desc lang-en">You curate the sources. The LLM does everything else &mdash; reading, summarizing, organizing, linking, and answering your questions.</p>
-  <p class="section-desc lang-zh">你負責策展來源。LLM 負責其餘一切 &mdash; 閱讀、摘要、整理、連結、回答你的問題。</p>
+  <div class="reveal">
+    <div class="section-label lang-en">Process</div>
+    <div class="section-label lang-zh">運作方式</div>
+    <h2 class="lang-en">You curate. The LLM compiles.</h2>
+    <h2 class="lang-zh">你策展，LLM 編譯。</h2>
+    <p class="section-desc lang-en">Raw sources go in. A structured, interlinked wiki comes out. You never touch the wiki directly — it belongs to the LLM.</p>
+    <p class="section-desc lang-zh">原始資料進去，結構化、互相連結的 wiki 出來。你不直接編輯 wiki — 那是 LLM 的領域。</p>
+  </div>
 
-  <div class="comparison">
+  <div class="comparison reveal">
     <div class="comparison-card old">
       <h3 class="lang-en">Traditional PKM</h3>
       <h3 class="lang-zh">傳統知識管理</h3>
@@ -262,113 +561,128 @@
         <li class="lang-en">Human curates sources</li><li class="lang-zh">人類策展來源資料</li>
         <li class="lang-en">LLM summarizes everything</li><li class="lang-zh">LLM 自動摘要一切</li>
         <li class="lang-en">LLM writes wiki articles</li><li class="lang-zh">LLM 撰寫 Wiki 文章</li>
-        <li class="lang-en">LLM builds index and graph</li><li class="lang-zh">LLM 建立索引與知識圖譜</li>
+        <li class="lang-en">LLM builds index &amp; graph</li><li class="lang-zh">LLM 建立索引與知識圖譜</li>
         <li class="lang-en">LLM answers your questions</li><li class="lang-zh">LLM 回答你的問題</li>
       </ul>
     </div>
   </div>
 
-  <div class="flow">
+  <div class="flow reveal">
     <div class="flow-step">
       <div class="icon">&#128220;</div>
       <h3>raw/</h3>
-      <p class="lang-en">Articles, papers, repos, datasets curated by you</p>
-      <p class="lang-zh">由你策展的文章、論文、程式碼庫、資料集</p>
+      <p class="lang-en">Articles, papers, repos, datasets</p>
+      <p class="lang-zh">文章、論文、程式庫、資料集</p>
     </div>
-    <div class="flow-arrow">&#10230;</div>
+    <div class="flow-arrow">&#8594;</div>
     <div class="flow-step">
-      <div class="icon">&#9881;</div>
-      <h3 class="lang-en">LLM Compile</h3><h3 class="lang-zh">LLM 編譯</h3>
-      <p class="lang-en">Summarize, extract concepts, write articles, build index</p>
-      <p class="lang-zh">摘要、提取概念、撰寫文章、建立索引</p>
+      <div class="icon">&#9881;&#65039;</div>
+      <h3 class="lang-en">compile</h3><h3 class="lang-zh">編譯</h3>
+      <p class="lang-en">Summarize, extract, write, index</p>
+      <p class="lang-zh">摘要、提取、撰寫、索引</p>
     </div>
-    <div class="flow-arrow">&#10230;</div>
+    <div class="flow-arrow">&#8594;</div>
     <div class="flow-step">
       <div class="icon">&#128214;</div>
       <h3>wiki/</h3>
-      <p class="lang-en">Structured knowledge base you browse in Obsidian</p>
-      <p class="lang-zh">在 Obsidian 中瀏覽的結構化知識庫</p>
+      <p class="lang-en">Structured knowledge base</p>
+      <p class="lang-zh">結構化知識庫</p>
     </div>
-    <div class="flow-arrow">&#10230;</div>
+    <div class="flow-arrow">&#8594;</div>
     <div class="flow-step">
       <div class="icon">&#128161;</div>
-      <h3 class="lang-en">Query</h3><h3 class="lang-zh">查詢</h3>
-      <p class="lang-en">Ask questions, get reports, slides, and insights</p>
-      <p class="lang-zh">提問、取得報告、簡報和洞察</p>
+      <h3 class="lang-en">query</h3><h3 class="lang-zh">查詢</h3>
+      <p class="lang-en">Reports, slides, insights</p>
+      <p class="lang-zh">報告、簡報、洞察</p>
     </div>
   </div>
 </section>
+
+<div class="divider"></div>
 
 <!-- ════ Features ════ -->
 <section id="features">
-  <h2 class="lang-en">What you <span class="hl">get</span></h2>
-  <h2 class="lang-zh"><span class="hl">功能</span>特色</h2>
-  <p class="section-desc lang-en">Everything you need to build a living, growing knowledge base powered by local LLMs.</p>
-  <p class="section-desc lang-zh">打造一個活的、持續成長的知識庫所需的一切，完全由本地 LLM 驅動。</p>
+  <div class="reveal">
+    <div class="section-label lang-en">Capabilities</div>
+    <div class="section-label lang-zh">功能特色</div>
+    <h2 class="lang-en">Everything the basin holds</h2>
+    <h2 class="lang-zh">冥想盆所承載的一切</h2>
+    <p class="section-desc lang-en">A complete system for building living knowledge from raw sources.</p>
+    <p class="section-desc lang-zh">從原始資料建構活知識的完整系統。</p>
+  </div>
 
-  <div class="features">
-    <div class="feature-card">
-      <div class="card-icon">&#128229;</div>
+  <div class="features reveal">
+    <div class="feature-cell">
+      <div class="cell-num">01</div>
       <h3 class="lang-en">Smart Ingest</h3><h3 class="lang-zh">智慧攝入</h3>
-      <p class="lang-en">Ingest URLs, PDFs, markdown files, and entire Git repos. Auto-downloads images and generates metadata.</p>
-      <p class="lang-zh">攝入網頁 URL、PDF、Markdown 檔案和整個 Git 儲存庫。自動下載圖片並生成 metadata。</p>
+      <p class="lang-en">URLs, PDFs, markdown, Git repos. Images auto-downloaded, metadata auto-generated.</p>
+      <p class="lang-zh">網頁、PDF、Markdown、Git 儲存庫。圖片自動下載，metadata 自動生成。</p>
     </div>
-    <div class="feature-card">
-      <div class="card-icon">&#9881;</div>
+    <div class="feature-cell">
+      <div class="cell-num">02</div>
       <h3 class="lang-en">6-Step Compiler</h3><h3 class="lang-zh">六步驟編譯器</h3>
-      <p class="lang-en">Summarize, extract concepts, write articles, build index, glossary, concept graph. Fully automated.</p>
-      <p class="lang-zh">摘要、提取概念、撰寫文章、建立索引、詞彙表、概念圖譜。全自動。</p>
+      <p class="lang-en">Summarize, extract concepts, write articles, build index, glossary, concept graph.</p>
+      <p class="lang-zh">摘要、提取概念、撰寫文章、建立索引、詞彙表、概念圖譜。</p>
     </div>
-    <div class="feature-card">
-      <div class="card-icon">&#128172;</div>
+    <div class="feature-cell">
+      <div class="cell-num">03</div>
       <h3 class="lang-en">Q&amp;A Engine</h3><h3 class="lang-zh">問答引擎</h3>
-      <p class="lang-en">Ask natural language questions. Get answers as text, research reports, or Marp slide decks.</p>
-      <p class="lang-zh">用自然語言提問。以純文字、研究報告或 Marp 簡報形式取得回答。</p>
+      <p class="lang-en">Natural language questions answered as text, research reports, or Marp slides.</p>
+      <p class="lang-zh">自然語言提問，以文字、研究報告或 Marp 簡報回答。</p>
     </div>
-    <div class="feature-card">
-      <div class="card-icon">&#128269;</div>
-      <h3 class="lang-en">Search</h3><h3 class="lang-zh">搜尋</h3>
-      <p class="lang-en">Keyword and semantic search with a built-in web UI. Cached indexes for instant results.</p>
-      <p class="lang-zh">關鍵字搜尋與語意搜尋，內建 Web UI。索引快取實現即時結果。</p>
+    <div class="feature-cell">
+      <div class="cell-num">04</div>
+      <h3 class="lang-en">Search</h3><h3 class="lang-zh">搜尋引擎</h3>
+      <p class="lang-en">Keyword and semantic search with built-in web UI. Cached for instant results.</p>
+      <p class="lang-zh">關鍵字與語意搜尋，內建 Web UI，索引快取即時回應。</p>
     </div>
-    <div class="feature-card">
-      <div class="card-icon">&#128736;</div>
+    <div class="feature-cell">
+      <div class="cell-num">05</div>
       <h3 class="lang-en">Wiki Linter</h3><h3 class="lang-zh">Wiki 檢查器</h3>
-      <p class="lang-en">Find broken links, orphaned articles, missing frontmatter. Auto-fix issues and get LLM-powered improvement suggestions.</p>
-      <p class="lang-zh">偵測斷裂連結、孤立文章、缺失 frontmatter。自動修復問題並取得 LLM 改善建議。</p>
+      <p class="lang-en">Broken links, orphans, missing frontmatter. Auto-fix and LLM improvement suggestions.</p>
+      <p class="lang-zh">斷裂連結、孤立文章、缺失 frontmatter。自動修復及 LLM 改善建議。</p>
     </div>
-    <div class="feature-card">
-      <div class="card-icon">&#127760;</div>
-      <h3 class="lang-en">100% Local</h3><h3 class="lang-zh">100% 本地運行</h3>
-      <p class="lang-en">Runs entirely on your machine with Ollama. No data leaves your computer. Cloud APIs available as optional fallback.</p>
-      <p class="lang-zh">透過 Ollama 完全在你的電腦上運行。資料不會外流。雲端 API 作為可選備援。</p>
+    <div class="feature-cell">
+      <div class="cell-num">06</div>
+      <h3 class="lang-en">100% Local</h3><h3 class="lang-zh">完全本地運行</h3>
+      <p class="lang-en">Runs on your machine with Ollama. No data leaves. Cloud APIs as optional fallback.</p>
+      <p class="lang-zh">透過 Ollama 在你的電腦上運行。資料不外流。雲端 API 可選備援。</p>
     </div>
-    <div class="feature-card">
-      <div class="card-icon">&#128142;</div>
+    <div class="feature-cell">
+      <div class="cell-num">07</div>
       <h3 class="lang-en">Obsidian Native</h3><h3 class="lang-zh">Obsidian 原生</h3>
-      <p class="lang-en">Browse your wiki in Obsidian with graph view, Dataview dashboard, and Marp slides. Beautiful by default.</p>
-      <p class="lang-zh">在 Obsidian 中以圖譜視圖、Dataview 儀表板和 Marp 簡報瀏覽你的 wiki。預設即美觀。</p>
+      <p class="lang-en">Graph view, Dataview dashboard, Marp slides. Browse your wiki beautifully.</p>
+      <p class="lang-zh">圖譜視圖、Dataview 儀表板、Marp 簡報。美觀瀏覽你的 wiki。</p>
     </div>
-    <div class="feature-card">
-      <div class="card-icon">&#128260;</div>
+    <div class="feature-cell">
+      <div class="cell-num">08</div>
       <h3 class="lang-en">Feedback Loop</h3><h3 class="lang-zh">回饋迴圈</h3>
-      <p class="lang-en">Query results file back into the wiki. Your explorations compound &mdash; the knowledge base grows with every question.</p>
-      <p class="lang-zh">查詢結果回填至 wiki。你的每次探索都會累積 &mdash; 知識庫隨每次提問而成長。</p>
+      <p class="lang-en">Query results file back into the wiki. Knowledge compounds with every question.</p>
+      <p class="lang-zh">查詢結果回填 wiki。知識隨每次提問持續累積成長。</p>
     </div>
   </div>
 </section>
 
+<div class="divider"></div>
+
 <!-- ════ Quick Start ════ -->
 <section id="start">
-  <h2 class="lang-en">Quick <span class="hl">Start</span></h2>
-  <h2 class="lang-zh"><span class="hl">快速</span>開始</h2>
-  <p class="section-desc lang-en">From zero to a working knowledge base in under 5 minutes.</p>
-  <p class="section-desc lang-zh">從零到一個運作中的知識庫，只需不到 5 分鐘。</p>
+  <div class="reveal">
+    <div class="section-label lang-en">Getting Started</div>
+    <div class="section-label lang-zh">快速開始</div>
+    <h2 class="lang-en">Five minutes to your first wiki</h2>
+    <h2 class="lang-zh">五分鐘建立你的第一個 Wiki</h2>
+  </div>
 
-  <div class="code-block"><code><span class="comment"># Clone and set up</span>
+  <div class="terminal reveal">
+    <div class="terminal-header">
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+    </div>
+    <div class="terminal-body"><code><span class="comment"># Clone and set up</span>
 <span class="cmd">git clone</span> https://github.com/ceparadise168/Pensieve.git
-<span class="cmd">cd</span> Pensieve
-<span class="cmd">bash</span> scripts/bootstrap.sh
+<span class="cmd">cd</span> Pensieve && <span class="cmd">bash</span> scripts/bootstrap.sh
 
 <span class="comment"># Start Ollama</span>
 <span class="cmd">ollama</span> serve
@@ -379,23 +693,28 @@
 <span class="comment"># Compile the wiki</span>
 <span class="cmd">./tools/kb</span> compile <span class="flag">--full</span>
 
-<span class="comment"># Open in Obsidian &mdash; select this directory as vault</span>
-
 <span class="comment"># Ask questions</span>
 <span class="cmd">./tools/kb</span> query <span class="flag">"What are the key concepts?"</span>
 
-<span class="comment"># Generate a presentation</span>
+<span class="comment"># Generate slides</span>
 <span class="cmd">./tools/kb</span> query <span class="flag">"Overview of main themes"</span> --output slides</code></div>
+  </div>
 </section>
+
+<div class="divider"></div>
 
 <!-- ════ Models ════ -->
 <section id="models">
-  <h2 class="lang-en">Recommended <span class="hl">Models</span></h2>
-  <h2 class="lang-zh">推薦<span class="hl">模型</span></h2>
-  <p class="section-desc lang-en">Runs on Apple Silicon with local Ollama models. No GPU required.</p>
-  <p class="section-desc lang-zh">在 Apple Silicon 上使用本地 Ollama 模型運行，無需獨立 GPU。</p>
+  <div class="reveal">
+    <div class="section-label lang-en">Configuration</div>
+    <div class="section-label lang-zh">模型配置</div>
+    <h2 class="lang-en">Recommended models</h2>
+    <h2 class="lang-zh">推薦模型</h2>
+    <p class="section-desc lang-en">Local inference on Apple Silicon via Ollama. No GPU required.</p>
+    <p class="section-desc lang-zh">在 Apple Silicon 上透過 Ollama 本地推理，無需獨立 GPU。</p>
+  </div>
 
-  <table class="models-table">
+  <table class="models-table reveal">
     <thead>
       <tr>
         <th class="lang-en">Task</th><th class="lang-zh">任務</th>
@@ -407,32 +726,27 @@
     <tbody>
       <tr>
         <td class="lang-en">Fast</td><td class="lang-zh">快速</td>
-        <td><code>qwen2.5:3b</code></td>
-        <td>~2 GB</td>
-        <td class="lang-en">Summarization, tagging, simple extraction</td><td class="lang-zh">摘要、標籤、簡單提取</td>
+        <td><code>qwen2.5:3b</code></td><td>~2 GB</td>
+        <td class="lang-en">Summarization, tagging</td><td class="lang-zh">摘要、標籤</td>
       </tr>
       <tr>
         <td class="lang-en">Main</td><td class="lang-zh">主力</td>
-        <td><code>gemma4</code></td>
-        <td>~10 GB</td>
-        <td class="lang-en">Article writing, Q&amp;A, linting</td><td class="lang-zh">文章撰寫、問答、檢查</td>
+        <td><code>gemma4</code></td><td>~10 GB</td>
+        <td class="lang-en">Articles, Q&amp;A, linting</td><td class="lang-zh">撰寫、問答、檢查</td>
       </tr>
       <tr>
         <td class="lang-en">Main (alt)</td><td class="lang-zh">主力 (替代)</td>
-        <td><code>qwen3:14b</code></td>
-        <td>~12 GB</td>
+        <td><code>qwen3:14b</code></td><td>~12 GB</td>
         <td class="lang-en">Hybrid thinking mode</td><td class="lang-zh">混合思維模式</td>
       </tr>
       <tr>
         <td class="lang-en">Complex</td><td class="lang-zh">複雜推理</td>
-        <td><code>deepseek-r1:32b</code></td>
-        <td>~24 GB</td>
-        <td class="lang-en">Multi-hop reasoning with chain-of-thought</td><td class="lang-zh">多步推理，含思維鏈</td>
+        <td><code>deepseek-r1:32b</code></td><td>~24 GB</td>
+        <td class="lang-en">Chain-of-thought reasoning</td><td class="lang-zh">思維鏈推理</td>
       </tr>
       <tr>
-        <td class="lang-en">Embeddings</td><td class="lang-zh">向量嵌入</td>
-        <td><code>nomic-embed-text</code></td>
-        <td>~0.3 GB</td>
+        <td class="lang-en">Embed</td><td class="lang-zh">嵌入</td>
+        <td><code>nomic-embed-text</code></td><td>~0.3 GB</td>
         <td class="lang-en">Semantic search vectors</td><td class="lang-zh">語意搜尋向量</td>
       </tr>
     </tbody>
@@ -441,20 +755,22 @@
 
 <!-- ════ Footer ════ -->
 <footer>
+  <div class="footer-logo">Pensieve</div>
   <p class="lang-en">
-    Inspired by <a href="https://x.com/karpathy/status/2039805659525644595">Andrej Karpathy's LLM Knowledge Bases</a>.
+    Inspired by <a href="https://x.com/karpathy/status/2039805659525644595">Andrej Karpathy</a>.
     Built with <a href="https://github.com/BerriAI/litellm">LiteLLM</a>,
-    <a href="https://ollama.com">Ollama</a>, and
+    <a href="https://ollama.com">Ollama</a> &amp;
     <a href="https://obsidian.md">Obsidian</a>.
   </p>
   <p class="lang-zh">
-    靈感來自 <a href="https://x.com/karpathy/status/2039805659525644595">Andrej Karpathy 的 LLM Knowledge Bases</a>。
-    使用 <a href="https://github.com/BerriAI/litellm">LiteLLM</a>、<a href="https://ollama.com">Ollama</a> 和 <a href="https://obsidian.md">Obsidian</a> 建構。
+    靈感來自 <a href="https://x.com/karpathy/status/2039805659525644595">Andrej Karpathy</a>。
+    使用 <a href="https://github.com/BerriAI/litellm">LiteLLM</a>、<a href="https://ollama.com">Ollama</a> 與 <a href="https://obsidian.md">Obsidian</a> 建構。
   </p>
   <p class="credits">MIT License &middot; <a href="https://github.com/ceparadise168/Pensieve">ceparadise168/Pensieve</a></p>
 </footer>
 
 <script>
+/* Language toggle */
 function toggleLang() {
   var body = document.body;
   if (body.classList.contains('en')) {
@@ -469,6 +785,19 @@ function toggleLang() {
     document.documentElement.lang = 'en';
   }
 }
+
+/* Scroll reveal */
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(function(el) {
+  observer.observe(el);
+});
 </script>
 
 </body>
