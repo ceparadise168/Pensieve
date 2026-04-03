@@ -177,22 +177,18 @@
     footer a:hover { text-decoration: underline; }
     footer .credits { margin-top: 0.5rem; opacity: 0.6; }
 
-    /* ── Lang ── */
-    .lang-en, .lang-zh { display: none; }
-    body.en .lang-en { display: initial; }
-    body.zh .lang-zh { display: initial; }
-    /* Block-level elements need display:block */
-    h2.lang-en, h2.lang-zh, p.lang-en, p.lang-zh,
-    li.lang-en, li.lang-zh, h3.lang-en, h3.lang-zh,
-    td.lang-en, td.lang-zh, th.lang-en, th.lang-zh { display: none; }
-    body.en h2.lang-en, body.en p.lang-en, body.en li.lang-en,
-    body.en h3.lang-en, body.en td.lang-en, body.en th.lang-en { display: revert; }
-    body.zh h2.lang-zh, body.zh p.lang-zh, body.zh li.lang-zh,
-    body.zh h3.lang-zh, body.zh td.lang-zh, body.zh th.lang-zh { display: revert; }
-    /* Inline spans */
-    span.lang-en, span.lang-zh, a.lang-en, a.lang-zh { display: none; }
-    body.en span.lang-en, body.en a.lang-en { display: inline; }
-    body.zh span.lang-zh, body.zh a.lang-zh { display: inline; }
+    /* ── Lang toggle ── */
+    /* Hide all lang elements by default with high specificity */
+    [class~="lang-en"], [class~="lang-zh"] { display: none !important; }
+    /* Show active language */
+    body.en [class~="lang-en"] { display: revert !important; }
+    body.zh [class~="lang-zh"] { display: revert !important; }
+    /* Inline elements stay inline */
+    body.en span.lang-en, body.en a.lang-en { display: inline !important; }
+    body.zh span.lang-zh, body.zh a.lang-zh { display: inline !important; }
+    /* List items need flex for the arrow ::before */
+    body.en li.lang-en { display: flex !important; }
+    body.zh li.lang-zh { display: flex !important; }
 
     @media (max-width: 700px) {
       .flow { flex-direction: column; }
