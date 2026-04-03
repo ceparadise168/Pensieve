@@ -22,6 +22,28 @@
       --mono: 'JetBrains Mono', 'Fira Code', monospace;
     }
 
+    /* ── Light mode ── */
+    body.light {
+      --bg: #f5f2ed;
+      --surface: rgba(230, 222, 210, 0.55);
+      --border: rgba(160, 140, 110, 0.15);
+      --text: #2c2418;
+      --text-dim: #8a7e6e;
+      --accent: #4a7a9c;
+      --gold: #9e7c38;
+      --glow: rgba(74, 122, 156, 0.08);
+    }
+    body.light::before { opacity: 0; }
+    body.light .basin .ripple { border-color: rgba(74, 122, 156, 0.1); }
+    body.light .basin::after { background: radial-gradient(circle, rgba(74,122,156,0.1) 0%, transparent 70%); }
+    body.light .terminal, body.light .terminal-header { background: #eae5dd; }
+    body.light .terminal-body .comment { color: #a89880; }
+    body.light .feature-cell { background: var(--bg); }
+    body.light .feature-cell:hover { background: rgba(230,222,210,0.6); }
+    body.light .feature-cell .cell-num { color: rgba(74,122,156,0.15); }
+    body.light .models-table tbody tr:hover { background: rgba(74,122,156,0.04); }
+    body.light .models-table td code { background: rgba(74,122,156,0.08); }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
 
@@ -78,7 +100,7 @@
       transition: color 0.3s;
     }
     nav .links a:hover { color: var(--accent); }
-    .lang-switch {
+    .nav-btn {
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text-dim);
@@ -90,7 +112,7 @@
       cursor: pointer;
       transition: all 0.3s;
     }
-    .lang-switch:hover { border-color: var(--gold); color: var(--gold); }
+    .nav-btn:hover { border-color: var(--gold); color: var(--gold); }
 
     /* ── Hero ── */
     .hero {
@@ -387,6 +409,11 @@
       padding: 1.5rem 2rem;
       overflow-x: auto;
     }
+    .terminal-body pre {
+      margin: 0;
+      white-space: pre;
+      overflow-x: auto;
+    }
     .terminal-body code {
       font-family: var(--mono);
       font-size: 0.8rem;
@@ -492,7 +519,8 @@
     <a class="lang-en" href="#features">Features</a><a class="lang-zh" href="#features">功能</a>
     <a class="lang-en" href="#start">Start</a><a class="lang-zh" href="#start">開始</a>
     <a href="https://github.com/ceparadise168/Pensieve">GitHub</a>
-    <button class="lang-switch" onclick="toggleLang()">ZH</button>
+    <button class="nav-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">&#9790;</button>
+    <button class="nav-btn" onclick="toggleLang()">ZH</button>
   </div>
 </nav>
 
@@ -508,7 +536,7 @@
   <h1>Pensieve</h1>
 
   <p class="subtitle lang-en">LLM-compiled personal knowledge base</p>
-  <p class="subtitle lang-zh">由 LLM 編譯的個人知識庫</p>
+  <p class="subtitle lang-zh">用 LLM 自動編譯的個人知識庫</p>
 
   <p class="quote lang-en">
     <span class="highlight">"One simply siphons the excess thoughts from one's mind,
@@ -516,7 +544,7 @@
     <span class="attr">— Albus Dumbledore</span>
   </p>
   <p class="quote lang-zh">
-    <span class="highlight">「只需將多餘的思緒從腦中抽出，倒入冥想盆中，便能從容地細細檢視。」</span>
+    <span class="highlight">「只要把多餘的念頭從腦中抽出，倒進儲思盆裡，就能慢慢仔細回顧。」</span>
     <span class="attr">— 阿不思．鄧不利多</span>
   </p>
 
@@ -540,7 +568,7 @@
     <h2 class="lang-en">You curate. The LLM compiles.</h2>
     <h2 class="lang-zh">你策展，LLM 編譯。</h2>
     <p class="section-desc lang-en">Raw sources go in. A structured, interlinked wiki comes out. You never touch the wiki directly — it belongs to the LLM.</p>
-    <p class="section-desc lang-zh">原始資料進去，結構化、互相連結的 wiki 出來。你不直接編輯 wiki — 那是 LLM 的領域。</p>
+    <p class="section-desc lang-zh">丟進原始資料，跑出結構化、交叉連結的 wiki。你完全不用手動編輯 wiki — 那是 LLM 的工作。</p>
   </div>
 
   <div class="comparison reveal">
@@ -548,20 +576,20 @@
       <h3 class="lang-en">Traditional PKM</h3>
       <h3 class="lang-zh">傳統知識管理</h3>
       <ul class="steps">
-        <li class="lang-en">Human reads the source</li><li class="lang-zh">人類閱讀原始資料</li>
-        <li class="lang-en">Human writes summaries</li><li class="lang-zh">人類撰寫摘要</li>
-        <li class="lang-en">Human organizes and tags</li><li class="lang-zh">人類整理與標籤分類</li>
-        <li class="lang-en">Human maintains links</li><li class="lang-zh">人類維護連結關係</li>
-        <li class="lang-en">Human searches manually</li><li class="lang-zh">人類手動搜尋</li>
+        <li class="lang-en">Human reads the source</li><li class="lang-zh">自己讀原始資料</li>
+        <li class="lang-en">Human writes summaries</li><li class="lang-zh">自己寫摘要筆記</li>
+        <li class="lang-en">Human organizes and tags</li><li class="lang-zh">自己分類打標籤</li>
+        <li class="lang-en">Human maintains links</li><li class="lang-zh">自己維護文件連結</li>
+        <li class="lang-en">Human searches manually</li><li class="lang-zh">自己搜尋找資料</li>
       </ul>
     </div>
     <div class="comparison-card new">
       <h3>Pensieve</h3>
       <ul class="steps">
-        <li class="lang-en">Human curates sources</li><li class="lang-zh">人類策展來源資料</li>
-        <li class="lang-en">LLM summarizes everything</li><li class="lang-zh">LLM 自動摘要一切</li>
-        <li class="lang-en">LLM writes wiki articles</li><li class="lang-zh">LLM 撰寫 Wiki 文章</li>
-        <li class="lang-en">LLM builds index &amp; graph</li><li class="lang-zh">LLM 建立索引與知識圖譜</li>
+        <li class="lang-en">Human curates sources</li><li class="lang-zh">你只負責收集來源</li>
+        <li class="lang-en">LLM summarizes everything</li><li class="lang-zh">LLM 幫你做摘要</li>
+        <li class="lang-en">LLM writes wiki articles</li><li class="lang-zh">LLM 幫你寫文章</li>
+        <li class="lang-en">LLM builds index &amp; graph</li><li class="lang-zh">LLM 建索引和知識圖譜</li>
         <li class="lang-en">LLM answers your questions</li><li class="lang-zh">LLM 回答你的問題</li>
       </ul>
     </div>
@@ -572,7 +600,7 @@
       <div class="icon">&#128220;</div>
       <h3>raw/</h3>
       <p class="lang-en">Articles, papers, repos, datasets</p>
-      <p class="lang-zh">文章、論文、程式庫、資料集</p>
+      <p class="lang-zh">文章、論文、repo、資料集</p>
     </div>
     <div class="flow-arrow">&#8594;</div>
     <div class="flow-step">
@@ -606,59 +634,59 @@
     <div class="section-label lang-en">Capabilities</div>
     <div class="section-label lang-zh">功能特色</div>
     <h2 class="lang-en">Everything the basin holds</h2>
-    <h2 class="lang-zh">冥想盆所承載的一切</h2>
+    <h2 class="lang-zh">儲思盆裡的一切</h2>
     <p class="section-desc lang-en">A complete system for building living knowledge from raw sources.</p>
-    <p class="section-desc lang-zh">從原始資料建構活知識的完整系統。</p>
+    <p class="section-desc lang-zh">從原始資料打造會成長的知識庫，你需要的工具全都有。</p>
   </div>
 
   <div class="features reveal">
     <div class="feature-cell">
       <div class="cell-num">01</div>
-      <h3 class="lang-en">Smart Ingest</h3><h3 class="lang-zh">智慧攝入</h3>
+      <h3 class="lang-en">Smart Ingest</h3><h3 class="lang-zh">智慧匯入</h3>
       <p class="lang-en">URLs, PDFs, markdown, Git repos. Images auto-downloaded, metadata auto-generated.</p>
-      <p class="lang-zh">網頁、PDF、Markdown、Git 儲存庫。圖片自動下載，metadata 自動生成。</p>
+      <p class="lang-zh">支援網頁、PDF、Markdown、Git repo。自動下載圖片、自動產生 metadata。</p>
     </div>
     <div class="feature-cell">
       <div class="cell-num">02</div>
       <h3 class="lang-en">6-Step Compiler</h3><h3 class="lang-zh">六步驟編譯器</h3>
       <p class="lang-en">Summarize, extract concepts, write articles, build index, glossary, concept graph.</p>
-      <p class="lang-zh">摘要、提取概念、撰寫文章、建立索引、詞彙表、概念圖譜。</p>
+      <p class="lang-zh">自動摘要、抽取概念、撰寫文章、建索引、詞彙表、概念圖譜。全自動化。</p>
     </div>
     <div class="feature-cell">
       <div class="cell-num">03</div>
       <h3 class="lang-en">Q&amp;A Engine</h3><h3 class="lang-zh">問答引擎</h3>
       <p class="lang-en">Natural language questions answered as text, research reports, or Marp slides.</p>
-      <p class="lang-zh">自然語言提問，以文字、研究報告或 Marp 簡報回答。</p>
+      <p class="lang-zh">用自然語言問問題，用文字、研究報告或 Marp 簡報回答你。</p>
     </div>
     <div class="feature-cell">
       <div class="cell-num">04</div>
       <h3 class="lang-en">Search</h3><h3 class="lang-zh">搜尋引擎</h3>
       <p class="lang-en">Keyword and semantic search with built-in web UI. Cached for instant results.</p>
-      <p class="lang-zh">關鍵字與語意搜尋，內建 Web UI，索引快取即時回應。</p>
+      <p class="lang-zh">關鍵字搜尋 + 語意搜尋，內建 Web 介面，有快取秒回結果。</p>
     </div>
     <div class="feature-cell">
       <div class="cell-num">05</div>
       <h3 class="lang-en">Wiki Linter</h3><h3 class="lang-zh">Wiki 檢查器</h3>
       <p class="lang-en">Broken links, orphans, missing frontmatter. Auto-fix and LLM improvement suggestions.</p>
-      <p class="lang-zh">斷裂連結、孤立文章、缺失 frontmatter。自動修復及 LLM 改善建議。</p>
+      <p class="lang-zh">找出壞掉的連結、孤立文章、缺少的 frontmatter。自動修復，還能請 LLM 給改善建議。</p>
     </div>
     <div class="feature-cell">
       <div class="cell-num">06</div>
       <h3 class="lang-en">100% Local</h3><h3 class="lang-zh">完全本地運行</h3>
       <p class="lang-en">Runs on your machine with Ollama. No data leaves. Cloud APIs as optional fallback.</p>
-      <p class="lang-zh">透過 Ollama 在你的電腦上運行。資料不外流。雲端 API 可選備援。</p>
+      <p class="lang-zh">用 Ollama 跑在你自己的電腦上，資料完全不會外流。雲端 API 當備援可選用。</p>
     </div>
     <div class="feature-cell">
       <div class="cell-num">07</div>
       <h3 class="lang-en">Obsidian Native</h3><h3 class="lang-zh">Obsidian 原生</h3>
       <p class="lang-en">Graph view, Dataview dashboard, Marp slides. Browse your wiki beautifully.</p>
-      <p class="lang-zh">圖譜視圖、Dataview 儀表板、Marp 簡報。美觀瀏覽你的 wiki。</p>
+      <p class="lang-zh">知識圖譜、Dataview 儀表板、Marp 簡報，在 Obsidian 裡漂亮地瀏覽你的 wiki。</p>
     </div>
     <div class="feature-cell">
       <div class="cell-num">08</div>
       <h3 class="lang-en">Feedback Loop</h3><h3 class="lang-zh">回饋迴圈</h3>
       <p class="lang-en">Query results file back into the wiki. Knowledge compounds with every question.</p>
-      <p class="lang-zh">查詢結果回填 wiki。知識隨每次提問持續累積成長。</p>
+      <p class="lang-zh">查詢結果自動存回 wiki，你的每次提問都在幫知識庫長大。</p>
     </div>
   </div>
 </section>
@@ -680,7 +708,7 @@
       <div class="terminal-dot"></div>
       <div class="terminal-dot"></div>
     </div>
-    <div class="terminal-body"><code><span class="comment"># Clone and set up</span>
+    <div class="terminal-body"><pre><code><span class="comment"># Clone and set up</span>
 <span class="cmd">git clone</span> https://github.com/ceparadise168/Pensieve.git
 <span class="cmd">cd</span> Pensieve && <span class="cmd">bash</span> scripts/bootstrap.sh
 
@@ -697,7 +725,7 @@
 <span class="cmd">./tools/kb</span> query <span class="flag">"What are the key concepts?"</span>
 
 <span class="comment"># Generate slides</span>
-<span class="cmd">./tools/kb</span> query <span class="flag">"Overview of main themes"</span> --output slides</code></div>
+<span class="cmd">./tools/kb</span> query <span class="flag">"Overview of main themes"</span> --output slides</code></pre></div>
   </div>
 </section>
 
@@ -711,7 +739,7 @@
     <h2 class="lang-en">Recommended models</h2>
     <h2 class="lang-zh">推薦模型</h2>
     <p class="section-desc lang-en">Local inference on Apple Silicon via Ollama. No GPU required.</p>
-    <p class="section-desc lang-zh">在 Apple Silicon 上透過 Ollama 本地推理，無需獨立 GPU。</p>
+    <p class="section-desc lang-zh">在 Apple Silicon Mac 上用 Ollama 跑本地推理，不需要獨立顯卡。</p>
   </div>
 
   <table class="models-table reveal">
@@ -773,17 +801,26 @@
 /* Language toggle */
 function toggleLang() {
   var body = document.body;
+  var btn = document.querySelectorAll('.nav-btn')[1];
   if (body.classList.contains('en')) {
     body.classList.remove('en');
     body.classList.add('zh');
-    document.querySelector('.lang-switch').textContent = 'EN';
+    btn.textContent = 'EN';
     document.documentElement.lang = 'zh-Hant';
   } else {
     body.classList.remove('zh');
     body.classList.add('en');
-    document.querySelector('.lang-switch').textContent = 'ZH';
+    btn.textContent = 'ZH';
     document.documentElement.lang = 'en';
   }
+}
+
+/* Theme toggle */
+function toggleTheme() {
+  var body = document.body;
+  var btn = document.getElementById('theme-btn');
+  body.classList.toggle('light');
+  btn.textContent = body.classList.contains('light') ? '\u263E' : '\u263D';
 }
 
 /* Scroll reveal */
