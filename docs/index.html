@@ -591,7 +591,7 @@
     <a class="lang-en" href="#start">Start</a><a class="lang-zh" href="#start">開始</a>
     <a href="https://github.com/ceparadise168/Pensieve">GitHub</a>
     <button class="nav-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">&#9788;</button>
-    <button class="nav-btn" onclick="toggleLang()">ZH</button>
+    <button class="nav-btn" onclick="toggleLang()">ZH-TW</button>
   </div>
 </nav>
 
@@ -892,9 +892,10 @@ function setLang(lang) {
   var btn = document.querySelectorAll('.nav-btn')[1];
   body.classList.remove('en', 'zh');
   body.classList.add(lang);
-  btn.textContent = lang === 'zh' ? 'EN' : 'ZH';
-  document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : 'en';
-  location.replace('#' + lang + (body.classList.contains('light') ? '' : '-dark'));
+  btn.textContent = lang === 'zh' ? 'EN' : 'ZH-TW';
+  document.documentElement.lang = lang === 'zh' ? 'zh-TW' : 'en';
+  var hashLang = lang === 'zh' ? 'zh-tw' : 'en';
+  location.replace('#' + hashLang + (body.classList.contains('light') ? '' : '-dark'));
 }
 
 /* Language toggle */
@@ -909,8 +910,8 @@ function toggleTheme() {
   body.classList.toggle('light');
   var isLight = body.classList.contains('light');
   btn.textContent = isLight ? '\u2604' : '\u263D';
-  var lang = body.classList.contains('zh') ? 'zh' : 'en';
-  location.replace('#' + lang + (isLight ? '' : '-dark'));
+  var hashLang = body.classList.contains('zh') ? 'zh-tw' : 'en';
+  location.replace('#' + hashLang + (isLight ? '' : '-dark'));
 }
 
 applyHash();
