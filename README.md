@@ -126,13 +126,23 @@ task_models:
   embed: "local-embed"           # Vector embeddings for search
 ```
 
-**Recommended models for Apple Silicon:**
+**Recommended models (2026):**
 
-| RAM | Setup |
-|-----|-------|
-| 16GB | `llama3.2:3b` (fast) + `qwen2.5:14b` (main) |
-| 32GB | Above + `qwen2.5:32b` (complex) |
-| 64GB+ | All local, no cloud needed |
+| Task | Model | Ollama name | Size | Notes |
+|------|-------|-------------|------|-------|
+| Fast (summarize, tag) | Qwen 2.5 3B | `qwen2.5:3b` | ~2GB | Best instruction-following at this size |
+| Main (articles, Q&A) | Qwen3 14B | `qwen3:14b` | ~12GB | Hybrid thinking mode, rivals GPT-4 for everyday tasks |
+| Complex reasoning | DeepSeek-R1 32B | `deepseek-r1:32b` | ~24GB | Chain-of-thought reasoning with thinking tokens |
+| Embeddings | nomic-embed-text | `nomic-embed-text` | ~0.3GB | Surpasses OpenAI text-embedding-3-small |
+
+**Apple Silicon RAM guide:**
+
+| RAM | Recommended setup |
+|-----|-------------------|
+| 8GB | `qwen2.5:3b` only — use cloud fallback for complex tasks |
+| 16GB | `qwen2.5:3b` (fast) + `qwen3:14b` (main) + `nomic-embed-text` |
+| 32GB | Above + `deepseek-r1:32b` or `gemma3:27b` for complex reasoning |
+| 64GB+ | All local, no cloud needed — can run `qwen3:32b` comfortably |
 
 ## Obsidian Integration
 

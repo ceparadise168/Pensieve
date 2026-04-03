@@ -1,29 +1,38 @@
 model_list:
+  # ── Local models (Ollama) ──
+  # Adjust to match your installed models: ollama list
+
   - model_name: "local-main"
     litellm_params:
-      model: "ollama/gemma4"
+      model: "ollama/qwen3:14b"
       api_base: "http://localhost:11434"
       timeout: 120
       stream: true
 
   - model_name: "local-fast"
     litellm_params:
-      model: "ollama/gemma4"
+      model: "ollama/qwen2.5:3b"
       api_base: "http://localhost:11434"
       timeout: 60
       stream: true
 
   - model_name: "local-embed"
     litellm_params:
-      model: "ollama/gemma4"
+      model: "ollama/nomic-embed-text"
       api_base: "http://localhost:11434"
 
-  # Cloud fallback (uncomment and set API keys)
+  # ── Cloud fallback (uncomment and set API keys) ──
   # - model_name: "cloud-main"
   #   litellm_params:
   #     model: "anthropic/claude-sonnet-4-20250514"
   #     api_key: "os.environ/ANTHROPIC_API_KEY"
   #     timeout: 120
+
+  # - model_name: "cloud-heavy"
+  #   litellm_params:
+  #     model: "anthropic/claude-opus-4-20250514"
+  #     api_key: "os.environ/ANTHROPIC_API_KEY"
+  #     timeout: 300
 
 router_settings:
   routing_strategy: "simple-shuffle"
@@ -31,6 +40,3 @@ router_settings:
   timeout: 120
   allowed_fails: 3
   cooldown_time: 60
-
-general_settings:
-  master_key: "sk-kb-local-dev"
