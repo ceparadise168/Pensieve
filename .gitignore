@@ -27,8 +27,16 @@ wiki/.obsidian/workspace.json
 wiki/.obsidian/workspace-mobile.json
 wiki/.obsidian/hotkeys.json
 
-# Cloned repos (too large to track)
-raw/repos/*/
+# User data (personal to each instance)
+raw/
+wiki/concepts/
+wiki/summaries/
+wiki/connections/
+wiki/images/
+wiki/_index.md
+wiki/_glossary.md
+wiki/_graph.md
+output/
 
 # OS
 .DS_Store
