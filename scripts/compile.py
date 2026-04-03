@@ -39,44 +39,52 @@ def _file_hash(path: Path) -> str:
     return hashlib.md5(path.read_bytes()).hexdigest()
 
 
-def _get_changed_files(state: dict) -> list[Path]:
+def _get_changed_files(state: dict) -> tuple[list[Path], dict[str, str]]:
+    """Find raw files that are new or changed since last compile.
+    Returns (changed_files, new_hashes) without mutating state.
+    """
     changed = []
+    new_hashes = {}
     for md_file in RAW_DIR.rglob("*.md"):
         h = _file_hash(md_file)
         rel = str(md_file.relative_to(PROJECT_ROOT))
         if state["file_hashes"].get(rel) != h:
             changed.append(md_file)
-            state["file_hashes"][rel] = h
-    return changed
+            new_hashes[rel] = h
+    return changed, new_hashes
 
 
 def step_1_summarize_sources(sources: list[Path]) -> list[dict]:
     summaries = []
     for src in sources:
-        content = src.read_text(encoding="utf-8")
-        rel_path = str(src.relative_to(PROJECT_ROOT))
-        summary = ask(
-            f"Summarize the following document in 3-5 paragraphs. "
-            f"Focus on key concepts, findings, and actionable insights.\n\n"
-            f"Document: {src.name}\n\n{content[:12000]}",
-            task="summarize",
-        )
-        slug = src.stem
-        summary_path = WIKI_DIR / "summaries" / f"{slug}.md"
-        summary_path.parent.mkdir(parents=True, exist_ok=True)
-        summary_path.write_text(
-            f"---\ntitle: 'Summary: {slug}'\n"
-            f"source: '{rel_path}'\n"
-            f"compiled: '{datetime.now().strftime('%Y-%m-%d')}'\n"
-            f"type: summary\n---\n\n{summary}",
-            encoding="utf-8",
-        )
-        summaries.append({
-            "source": rel_path,
-            "summary_path": str(summary_path.relative_to(PROJECT_ROOT)),
-            "summary": summary[:500],
-        })
-        click.echo(f"  Summarized: {src.name}")
+        try:
+            content = src.read_text(encoding="utf-8")
+            rel_path = str(src.relative_to(PROJECT_ROOT))
+            summary = ask(
+                f"Summarize the following document in 3-5 paragraphs. "
+                f"Focus on key concepts, findings, and actionable insights.\n\n"
+                f"Document: {src.name}\n\n"
+                f"<document>\n{content[:12000]}\n</document>",
+                task="summarize",
+            )
+            slug = src.stem
+            summary_path = WIKI_DIR / "summaries" / f"{slug}.md"
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            summary_path.write_text(
+                f"---\ntitle: 'Summary: {slug}'\n"
+                f"source: '{rel_path}'\n"
+                f"compiled: '{datetime.now().strftime('%Y-%m-%d')}'\n"
+                f"type: summary\n---\n\n{summary}",
+                encoding="utf-8",
+            )
+            summaries.append({
+                "source": rel_path,
+                "summary_path": str(summary_path.relative_to(PROJECT_ROOT)),
+                "summary": summary[:500],
+            })
+            click.echo(f"  Summarized: {src.name}")
+        except Exception as e:
+            click.echo(f"  ERROR summarizing {src.name}: {e}", err=True)
     return summaries
 
 
@@ -109,45 +117,56 @@ Return ONLY the JSON array, no markdown fences or explanation."""
         concepts = json.loads(response)
     except json.JSONDecodeError:
         click.echo("  Warning: Failed to parse concepts JSON, retrying...")
-        concepts = json.loads(ask(
-            f"Fix this JSON and return ONLY valid JSON:\n{response}",
-            task="summarize",
-            temperature=0.0,
-        ))
+        try:
+            concepts = json.loads(ask(
+                f"Fix this JSON and return ONLY valid JSON:\n{response}",
+                task="summarize",
+                temperature=0.0,
+            ))
+        except (json.JSONDecodeError, Exception) as e:
+            click.echo(f"  ERROR: Could not extract concepts: {e}", err=True)
+            return []
     return concepts
 
 
 def step_3_write_concept_articles(concepts: list[dict]):
     for concept in concepts:
         slug = concept["slug"]
-        article_path = WIKI_DIR / "concepts" / f"{slug}.md"
-        source_contents = []
-        for src_rel in concept.get("related_sources", []):
-            src_path = PROJECT_ROOT / src_rel
-            if src_path.exists():
-                source_contents.append(src_path.read_text(encoding="utf-8")[:8000])
-        context = "\n\n---\n\n".join(source_contents)
-        existing_content = ""
-        if article_path.exists():
-            existing_content = article_path.read_text(encoding="utf-8")
-        if existing_content:
-            prompt = f"""Update the following wiki article with new information from the sources below.
+        try:
+            article_path = WIKI_DIR / "concepts" / f"{slug}.md"
+            source_contents = []
+            for src_rel in concept.get("related_sources", []):
+                src_path = PROJECT_ROOT / src_rel
+                if src_path.exists():
+                    source_contents.append(src_path.read_text(encoding="utf-8")[:8000])
+            context = "\n\n---\n\n".join(source_contents)
+            existing_content = ""
+            if article_path.exists():
+                existing_content = article_path.read_text(encoding="utf-8")
+            if existing_content:
+                prompt = f"""Update the following wiki article with new information from the sources below.
 Preserve existing accurate content. Add new insights. Fix any inconsistencies.
 
 EXISTING ARTICLE:
+<article>
 {existing_content}
+</article>
 
 NEW SOURCE MATERIAL:
+<sources>
 {context}
+</sources>
 
 Return the COMPLETE updated article in markdown with YAML frontmatter."""
-        else:
-            prompt = f"""Write a comprehensive wiki article about: {concept['title']}
+            else:
+                prompt = f"""Write a comprehensive wiki article about: {concept['title']}
 
 Description: {concept['description']}
 
 Use the following source material:
+<sources>
 {context}
+</sources>
 
 Requirements:
 - Start with YAML frontmatter (title, aliases, tags, sources, created, updated, status)
@@ -158,10 +177,12 @@ Requirements:
 - Be thorough but concise. Target 500-1500 words.
 - Use wiki-style internal links: [[concept-slug]]"""
 
-        article_content = ask(prompt, task="compile_article", max_tokens=8192)
-        article_path.parent.mkdir(parents=True, exist_ok=True)
-        article_path.write_text(article_content, encoding="utf-8")
-        click.echo(f"  Wrote: {article_path.name}")
+            article_content = ask(prompt, task="compile_article", max_tokens=8192)
+            article_path.parent.mkdir(parents=True, exist_ok=True)
+            article_path.write_text(article_content, encoding="utf-8")
+            click.echo(f"  Wrote: {article_path.name}")
+        except Exception as e:
+            click.echo(f"  ERROR writing article {slug}: {e}", err=True)
 
 
 def step_4_build_index():
@@ -230,7 +251,10 @@ def step_5_build_graph():
     ]
     for source, targets in graph.items():
         for target in targets:
-            lines.append(f"    {source} --> {target}")
+            # Slugify for valid Mermaid node IDs
+            target_id = re.sub(r'[^\w-]', '', target.strip().lower().replace(" ", "-"))
+            if target_id:
+                lines.append(f"    {source} --> {target_id}[\"{target}\"]")
     lines.append("```")
     lines.append("")
     lines.append("## Adjacency List")
@@ -266,11 +290,12 @@ def compile_wiki(full: bool, incremental: bool, article: str):
             }])
         return
 
+    new_hashes = {}
     if full:
         sources = list(RAW_DIR.rglob("*.md"))
         click.echo(f"Full compile: {len(sources)} source files")
     else:
-        sources = _get_changed_files(state)
+        sources, new_hashes = _get_changed_files(state)
         if not sources:
             click.echo("No changes detected. Use --full to force recompilation.")
             return
@@ -278,6 +303,11 @@ def compile_wiki(full: bool, incremental: bool, article: str):
 
     click.echo("\n[Step 1/5] Summarizing sources...")
     summaries = step_1_summarize_sources(sources)
+
+    # Save state after summarization so successful work is not lost
+    if new_hashes:
+        state["file_hashes"].update(new_hashes)
+        _save_state(state)
 
     click.echo("\n[Step 2/5] Extracting concepts...")
     concepts = step_2_extract_concepts(summaries)

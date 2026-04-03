@@ -19,8 +19,8 @@ echo "[2/4] Running health checks..."
 echo "[3/4] Auto-fixing issues..."
 ./tools/kb lint --fix
 
-# Step 4: Rebuild search index
-echo "[4/4] Rebuilding search index..."
-./tools/kb search --rebuild-index 2>/dev/null || true
+# Step 4: Verify search works
+echo "[4/4] Verifying search..."
+./tools/kb search "test" --json-out > /dev/null 2>&1 || true
 
 echo "=== Daily workflow complete ==="

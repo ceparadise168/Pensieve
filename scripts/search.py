@@ -164,6 +164,11 @@ def _search_html() -> str:
 <input type="text" id="q" placeholder="Search..." autofocus>
 <div id="results"></div>
 <script>
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 let timer;
 document.getElementById('q').addEventListener('input', (e) => {
   clearTimeout(timer);
@@ -172,8 +177,8 @@ document.getElementById('q').addEventListener('input', (e) => {
       .then(r => r.json())
       .then(data => {
         document.getElementById('results').innerHTML = data.map(r =>
-          `<div class="result"><b>${r.file}</b> <span class="score">(${r.score})</span>` +
-          (r.matches ? r.matches.map(m => `<div class="match">L${m.line}: ${m.context}</div>`).join('') : '') +
+          `<div class="result"><b>${esc(r.file)}</b> <span class="score">(${esc(String(r.score))})</span>` +
+          (r.matches ? r.matches.map(m => `<div class="match">L${esc(String(m.line))}: ${esc(m.context)}</div>`).join('') : '') +
           '</div>'
         ).join('');
       });
