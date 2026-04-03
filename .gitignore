@@ -1,11 +1,44 @@
+# Python
 .venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+package-lock.json
+
+# Environment / secrets
 .env
+
+# Kiln runtime state
 .compile_state.json
 .search_index.json
 .keyword_index.json
 .embed_index.json
-node_modules/
-__pycache__/
+
+# Obsidian (per-user workspace state)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/hotkeys.json
+wiki/.obsidian/workspace.json
+wiki/.obsidian/workspace-mobile.json
+wiki/.obsidian/hotkeys.json
+
+# Cloned repos (too large to track)
 raw/repos/*/
-*.pyc
+
+# OS
 .DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# pytest
+.pytest_cache/
