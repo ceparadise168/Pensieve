@@ -34,8 +34,8 @@ datasets/ ─────┘                              ├── _glossary.md
 
 ```bash
 # 1. Clone and bootstrap
-git clone https://github.com/penseive/pensieve.git
-cd pensieve
+git clone https://github.com/ceparadise168/Pensieve.git
+cd Pensieve
 bash scripts/bootstrap.sh
 
 # 2. Start Ollama

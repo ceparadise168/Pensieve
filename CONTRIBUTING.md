@@ -5,8 +5,8 @@ Thanks for your interest in contributing!
 ## Getting Started
 
 ```bash
-git clone https://github.com/penseive/pensieve.git
-cd pensieve
+git clone https://github.com/ceparadise168/Pensieve.git
+cd Pensieve
 bash scripts/bootstrap.sh
 source .venv/bin/activate
 pytest tests/ -v  # make sure everything passes
