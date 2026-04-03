@@ -4,7 +4,7 @@ model_list:
 
   - model_name: "local-main"
     litellm_params:
-      model: "ollama/qwen3:14b"
+      model: "ollama/gemma4"
       api_base: "http://localhost:11434"
       timeout: 120
       stream: true
