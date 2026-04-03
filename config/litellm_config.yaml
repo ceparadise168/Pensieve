@@ -1,21 +1,21 @@
 model_list:
   - model_name: "local-main"
     litellm_params:
-      model: "ollama/qwen2.5:14b"
+      model: "ollama/deepseek-r1"
       api_base: "http://localhost:11434"
       timeout: 120
       stream: true
 
   - model_name: "local-fast"
     litellm_params:
-      model: "ollama/llama3.2:3b"
+      model: "ollama/llama3"
       api_base: "http://localhost:11434"
       timeout: 60
       stream: true
 
   - model_name: "local-embed"
     litellm_params:
-      model: "ollama/nomic-embed-text"
+      model: "ollama/llama3"
       api_base: "http://localhost:11434"
 
   # Cloud fallback (uncomment and set API keys)
