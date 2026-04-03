@@ -875,21 +875,31 @@
 </footer>
 
 <script>
-/* Language toggle */
-function toggleLang() {
+/* Read hash on load: #zh, #en, #zh-dark, #en-dark, #dark, etc. */
+function applyHash() {
+  var hash = location.hash.replace('#', '').toLowerCase();
+  var body = document.body;
+  if (hash.indexOf('zh') !== -1) setLang('zh');
+  else if (hash.indexOf('en') !== -1) setLang('en');
+  if (hash.indexOf('dark') !== -1) {
+    body.classList.remove('light');
+    document.getElementById('theme-btn').textContent = '\u263D';
+  }
+}
+
+function setLang(lang) {
   var body = document.body;
   var btn = document.querySelectorAll('.nav-btn')[1];
-  if (body.classList.contains('en')) {
-    body.classList.remove('en');
-    body.classList.add('zh');
-    btn.textContent = 'EN';
-    document.documentElement.lang = 'zh-Hant';
-  } else {
-    body.classList.remove('zh');
-    body.classList.add('en');
-    btn.textContent = 'ZH';
-    document.documentElement.lang = 'en';
-  }
+  body.classList.remove('en', 'zh');
+  body.classList.add(lang);
+  btn.textContent = lang === 'zh' ? 'EN' : 'ZH';
+  document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : 'en';
+  location.replace('#' + lang + (body.classList.contains('light') ? '' : '-dark'));
+}
+
+/* Language toggle */
+function toggleLang() {
+  setLang(document.body.classList.contains('en') ? 'zh' : 'en');
 }
 
 /* Theme toggle */
@@ -897,9 +907,13 @@ function toggleTheme() {
   var body = document.body;
   var btn = document.getElementById('theme-btn');
   body.classList.toggle('light');
-  /* Sun = currently light (click to go dark), Moon = currently dark (click to go light) */
-  btn.textContent = body.classList.contains('light') ? '\u2604' : '\u263D';
+  var isLight = body.classList.contains('light');
+  btn.textContent = isLight ? '\u2604' : '\u263D';
+  var lang = body.classList.contains('zh') ? 'zh' : 'en';
+  location.replace('#' + lang + (isLight ? '' : '-dark'));
 }
+
+applyHash();
 
 /* Scroll reveal */
 var observer = new IntersectionObserver(function(entries) {
