@@ -1,0 +1,300 @@
+"""
+Wiki Compiler — the heart of the knowledge base.
+Reads raw/ sources and compiles/updates wiki/ articles.
+
+Usage:
+    python scripts/compile.py --full
+    python scripts/compile.py --incremental
+    python scripts/compile.py --article "concept-name"
+"""
+import click
+import json
+import re
+import hashlib
+from datetime import datetime
+from pathlib import Path
+
+import frontmatter
+
+from utils.llm_client import ask, ask_with_context
+
+PROJECT_ROOT = Path(__file__).parent.parent
+RAW_DIR = PROJECT_ROOT / "raw"
+WIKI_DIR = PROJECT_ROOT / "wiki"
+STATE_FILE = PROJECT_ROOT / ".compile_state.json"
+
+
+def _load_state() -> dict:
+    if STATE_FILE.exists():
+        return json.loads(STATE_FILE.read_text())
+    return {"file_hashes": {}, "last_compile": None}
+
+
+def _save_state(state: dict):
+    state["last_compile"] = datetime.now().isoformat()
+    STATE_FILE.write_text(json.dumps(state, indent=2))
+
+
+def _file_hash(path: Path) -> str:
+    return hashlib.md5(path.read_bytes()).hexdigest()
+
+
+def _get_changed_files(state: dict) -> list[Path]:
+    changed = []
+    for md_file in RAW_DIR.rglob("*.md"):
+        h = _file_hash(md_file)
+        rel = str(md_file.relative_to(PROJECT_ROOT))
+        if state["file_hashes"].get(rel) != h:
+            changed.append(md_file)
+            state["file_hashes"][rel] = h
+    return changed
+
+
+def step_1_summarize_sources(sources: list[Path]) -> list[dict]:
+    summaries = []
+    for src in sources:
+        content = src.read_text(encoding="utf-8")
+        rel_path = str(src.relative_to(PROJECT_ROOT))
+        summary = ask(
+            f"Summarize the following document in 3-5 paragraphs. "
+            f"Focus on key concepts, findings, and actionable insights.\n\n"
+            f"Document: {src.name}\n\n{content[:12000]}",
+            task="summarize",
+        )
+        slug = src.stem
+        summary_path = WIKI_DIR / "summaries" / f"{slug}.md"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            f"---\ntitle: 'Summary: {slug}'\n"
+            f"source: '{rel_path}'\n"
+            f"compiled: '{datetime.now().strftime('%Y-%m-%d')}'\n"
+            f"type: summary\n---\n\n{summary}",
+            encoding="utf-8",
+        )
+        summaries.append({
+            "source": rel_path,
+            "summary_path": str(summary_path.relative_to(PROJECT_ROOT)),
+            "summary": summary[:500],
+        })
+        click.echo(f"  Summarized: {src.name}")
+    return summaries
+
+
+def step_2_extract_concepts(summaries: list[dict]) -> list[str]:
+    all_summaries = "\n\n".join(
+        f"[{s['source']}]: {s['summary']}" for s in summaries
+    )
+    existing = [p.stem for p in (WIKI_DIR / "concepts").glob("*.md")]
+    prompt = f"""Analyze these document summaries and identify all key concepts
+that deserve their own wiki article.
+
+Existing concepts (avoid duplicates): {', '.join(existing) if existing else 'none'}
+
+Summaries:
+{all_summaries}
+
+Return a JSON array of objects, each with:
+- "slug": URL-friendly concept name (lowercase, hyphens)
+- "title": Human-readable title
+- "description": One-sentence description
+- "related_sources": list of source file paths that discuss this concept
+
+Return ONLY the JSON array, no markdown fences or explanation."""
+
+    response = ask(prompt, task="compile_article", temperature=0.2)
+    response = response.strip()
+    if response.startswith("```"):
+        response = response.split("\n", 1)[1].rsplit("```", 1)[0]
+    try:
+        concepts = json.loads(response)
+    except json.JSONDecodeError:
+        click.echo("  Warning: Failed to parse concepts JSON, retrying...")
+        concepts = json.loads(ask(
+            f"Fix this JSON and return ONLY valid JSON:\n{response}",
+            task="summarize",
+            temperature=0.0,
+        ))
+    return concepts
+
+
+def step_3_write_concept_articles(concepts: list[dict]):
+    for concept in concepts:
+        slug = concept["slug"]
+        article_path = WIKI_DIR / "concepts" / f"{slug}.md"
+        source_contents = []
+        for src_rel in concept.get("related_sources", []):
+            src_path = PROJECT_ROOT / src_rel
+            if src_path.exists():
+                source_contents.append(src_path.read_text(encoding="utf-8")[:8000])
+        context = "\n\n---\n\n".join(source_contents)
+        existing_content = ""
+        if article_path.exists():
+            existing_content = article_path.read_text(encoding="utf-8")
+        if existing_content:
+            prompt = f"""Update the following wiki article with new information from the sources below.
+Preserve existing accurate content. Add new insights. Fix any inconsistencies.
+
+EXISTING ARTICLE:
+{existing_content}
+
+NEW SOURCE MATERIAL:
+{context}
+
+Return the COMPLETE updated article in markdown with YAML frontmatter."""
+        else:
+            prompt = f"""Write a comprehensive wiki article about: {concept['title']}
+
+Description: {concept['description']}
+
+Use the following source material:
+{context}
+
+Requirements:
+- Start with YAML frontmatter (title, aliases, tags, sources, created, updated, status)
+- Write a clear introduction paragraph
+- Organize into logical sections with ## headings
+- Include a ## Related section with wiki-links to potentially related concepts
+- Include a ## Sources section linking back to raw/ files
+- Be thorough but concise. Target 500-1500 words.
+- Use wiki-style internal links: [[concept-slug]]"""
+
+        article_content = ask(prompt, task="compile_article", max_tokens=8192)
+        article_path.parent.mkdir(parents=True, exist_ok=True)
+        article_path.write_text(article_content, encoding="utf-8")
+        click.echo(f"  Wrote: {article_path.name}")
+
+
+def step_4_build_index():
+    articles = []
+    for md_file in sorted((WIKI_DIR / "concepts").glob("*.md")):
+        try:
+            post = frontmatter.load(md_file)
+            articles.append({
+                "slug": md_file.stem,
+                "title": post.get("title", md_file.stem),
+                "tags": post.get("tags", []),
+                "summary": post.content[:200].replace("\n", " "),
+                "status": post.get("status", "draft"),
+            })
+        except Exception:
+            articles.append({"slug": md_file.stem, "title": md_file.stem})
+
+    lines = [
+        "---",
+        "title: 'Knowledge Base Index'",
+        f"updated: '{datetime.now().strftime('%Y-%m-%d')}'",
+        f"total_articles: {len(articles)}",
+        "---",
+        "",
+        "# Knowledge Base Index",
+        "",
+        f"Total articles: {len(articles)}",
+        "",
+    ]
+    tag_map = {}
+    for a in articles:
+        for tag in a.get("tags", ["untagged"]):
+            tag_map.setdefault(tag, []).append(a)
+    for tag in sorted(tag_map.keys()):
+        lines.append(f"## {tag}")
+        lines.append("")
+        for a in tag_map[tag]:
+            status = a.get("status", "")
+            marker = " ✓" if status == "published" else ""
+            lines.append(f"- [[{a['slug']}|{a.get('title', a['slug'])}]]{marker}")
+        lines.append("")
+
+    (WIKI_DIR / "_index.md").write_text("\n".join(lines), encoding="utf-8")
+    click.echo(f"  Index updated: {len(articles)} articles")
+
+
+def step_5_build_graph():
+    concepts_dir = WIKI_DIR / "concepts"
+    graph = {}
+    for md_file in concepts_dir.glob("*.md"):
+        content = md_file.read_text(encoding="utf-8")
+        slug = md_file.stem
+        links = re.findall(r'\[\[([^\]|]+)', content)
+        graph[slug] = links
+
+    lines = [
+        "---",
+        "title: 'Concept Graph'",
+        f"updated: '{datetime.now().strftime('%Y-%m-%d')}'",
+        "---",
+        "",
+        "# Concept Relationship Graph",
+        "",
+        "```mermaid",
+        "graph LR",
+    ]
+    for source, targets in graph.items():
+        for target in targets:
+            lines.append(f"    {source} --> {target}")
+    lines.append("```")
+    lines.append("")
+    lines.append("## Adjacency List")
+    lines.append("")
+    for source, targets in sorted(graph.items()):
+        if targets:
+            links_str = ", ".join(f"[[{t}]]" for t in targets)
+            lines.append(f"- **{source}** → {links_str}")
+
+    (WIKI_DIR / "_graph.md").write_text("\n".join(lines), encoding="utf-8")
+    click.echo(f"  Graph updated: {len(graph)} nodes")
+
+
+@click.command()
+@click.option("--full", is_flag=True, help="Full recompilation of all sources")
+@click.option("--incremental", is_flag=True, default=True, help="Only process changed sources")
+@click.option("--article", type=str, help="Recompile a specific article by slug")
+def compile_wiki(full: bool, incremental: bool, article: str):
+    """Compile the wiki from raw sources."""
+    state = _load_state()
+
+    if article:
+        click.echo(f"Recompiling article: {article}")
+        concept_path = WIKI_DIR / "concepts" / f"{article}.md"
+        if concept_path.exists():
+            post = frontmatter.load(concept_path)
+            sources = [PROJECT_ROOT / s for s in post.get("sources", [])]
+            step_3_write_concept_articles([{
+                "slug": article,
+                "title": post.get("title", article),
+                "description": "",
+                "related_sources": [str(s.relative_to(PROJECT_ROOT)) for s in sources],
+            }])
+        return
+
+    if full:
+        sources = list(RAW_DIR.rglob("*.md"))
+        click.echo(f"Full compile: {len(sources)} source files")
+    else:
+        sources = _get_changed_files(state)
+        if not sources:
+            click.echo("No changes detected. Use --full to force recompilation.")
+            return
+        click.echo(f"Incremental compile: {len(sources)} changed files")
+
+    click.echo("\n[Step 1/5] Summarizing sources...")
+    summaries = step_1_summarize_sources(sources)
+
+    click.echo("\n[Step 2/5] Extracting concepts...")
+    concepts = step_2_extract_concepts(summaries)
+    click.echo(f"  Found {len(concepts)} concepts")
+
+    click.echo("\n[Step 3/5] Writing concept articles...")
+    step_3_write_concept_articles(concepts)
+
+    click.echo("\n[Step 4/5] Building index...")
+    step_4_build_index()
+
+    click.echo("\n[Step 5/5] Building concept graph...")
+    step_5_build_graph()
+
+    _save_state(state)
+    click.echo(f"\nCompilation complete. Wiki: {WIKI_DIR}")
+
+
+if __name__ == "__main__":
+    compile_wiki()
