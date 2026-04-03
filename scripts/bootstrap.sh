@@ -24,7 +24,7 @@ npm install --save-dev @marp-team/marp-cli 2>/dev/null || true
 # ── 4. Ollama models ──
 echo "[4/6] Pulling Ollama models (if space available)..."
 ollama pull qwen2.5:3b 2>/dev/null || echo "  Skipped qwen2.5:3b (check disk space)"
-ollama pull qwen3:14b 2>/dev/null || echo "  Skipped qwen3:14b (check disk space)"
+ollama pull gemma4 2>/dev/null || echo "  Skipped gemma4 (check disk space)"
 ollama pull nomic-embed-text 2>/dev/null || echo "  Skipped nomic-embed-text (check disk space)"
 
 # ── 5. Directory structure ──

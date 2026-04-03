@@ -1,9 +1,3 @@
-import sys
-from pathlib import Path
-
-# Add scripts to path so we can import utils
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-
 from utils.llm_client import get_model_for_task, _load_model_config
 
 

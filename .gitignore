@@ -36,6 +36,7 @@ wiki/images/
 wiki/_index.md
 wiki/_glossary.md
 wiki/_graph.md
+!wiki/_dashboard.md
 output/
 
 # OS

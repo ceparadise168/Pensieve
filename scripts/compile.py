@@ -314,9 +314,8 @@ def step_6_build_graph():
 
 @click.command()
 @click.option("--full", is_flag=True, help="Full recompilation of all sources")
-@click.option("--incremental", is_flag=True, default=True, help="Only process changed sources")
 @click.option("--article", type=str, help="Recompile a specific article by slug")
-def compile_wiki(full: bool, incremental: bool, article: str):
+def compile_wiki(full: bool, article: str):
     """Compile the wiki from raw sources."""
     state = _load_state()
 

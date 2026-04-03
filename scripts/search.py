@@ -256,7 +256,7 @@ def _start_server(port: int):
         def log_message(self, format, *args):
             pass
 
-    server = HTTPServer(("", port), SearchHandler)
+    server = HTTPServer(("127.0.0.1", port), SearchHandler)
     server.serve_forever()
 
 

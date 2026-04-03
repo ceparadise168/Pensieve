@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+mkdir -p output
 echo "=== Daily Knowledge Base Workflow ==="
 echo "Date: $(date)"
 

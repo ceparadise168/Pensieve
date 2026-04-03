@@ -14,8 +14,7 @@ from pathlib import Path
 
 import frontmatter
 
-from utils.llm_client import ask, ask_with_context, embed_text
-from utils.markdown_utils import find_relevant_files
+from utils.llm_client import ask, ask_with_context
 
 PROJECT_ROOT = Path(__file__).parent.parent
 WIKI_DIR = PROJECT_ROOT / "wiki"

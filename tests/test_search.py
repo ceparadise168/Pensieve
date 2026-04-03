@@ -1,8 +1,4 @@
 """Tests for search engine (keyword indexing, no LLM needed)."""
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 
 def test_keyword_search_finds_matches(tmp_path, monkeypatch):

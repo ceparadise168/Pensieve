@@ -8,8 +8,6 @@ requires-python = ">=3.11"
 keywords = ["llm", "knowledge-base", "obsidian", "wiki", "rag", "pensieve", "personal-knowledge-management"]
 dependencies = [
     "litellm",
-    "openai",
-    "anthropic",
     "click",
     "rich",
     "pyyaml",
@@ -22,6 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+cloud = ["openai", "anthropic"]
 dev = ["pytest"]
 
 [tool.pytest.ini_options]

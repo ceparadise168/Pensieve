@@ -1,8 +1,4 @@
-import sys
 import json
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from compile import _file_hash, _load_state, _save_state
 
