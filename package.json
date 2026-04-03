@@ -1,5 +1,5 @@
 {
-  "name": "kiln-kb",
+  "name": "pensieve",
   "version": "0.1.0",
   "description": "A self-maintaining, LLM-compiled personal knowledge base",
   "scripts": {},

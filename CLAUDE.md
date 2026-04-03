@@ -1,7 +1,7 @@
-# Kiln — Agent Instructions
+# Pensieve — Agent Instructions
 
 ## What is this project?
-Kiln is a self-maintaining, LLM-compiled personal knowledge base.
+Pensieve is a self-maintaining, LLM-compiled personal knowledge base.
 Human curates sources into `raw/`. LLM compiles `wiki/`. Human reads in Obsidian.
 
 ## Key rules

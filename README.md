@@ -1,4 +1,6 @@
-# Kiln
+# Pensieve
+
+> *"I use the Pensieve. One simply siphons the excess thoughts from one's mind, pours them into the basin, and examines them at one's leisure."* — Albus Dumbledore
 
 A self-maintaining, LLM-compiled personal knowledge base.
 
@@ -8,7 +10,7 @@ Inspired by [Andrej Karpathy's LLM Knowledge Bases workflow](https://x.com/karpa
 
 ```
 Traditional PKM:  Human -> Read -> Summarize -> Organize -> Query -> Answer
-Kiln:             Human -> Curate Sources -> LLM Compiles -> LLM Queries -> Human Reviews
+Pensieve:         Human -> Curate Sources -> LLM Compiles -> LLM Queries -> Human Reviews
 ```
 
 ## How it works
@@ -32,8 +34,8 @@ datasets/ ─────┘                              ├── _glossary.md
 
 ```bash
 # 1. Clone and bootstrap
-git clone https://github.com/yourusername/kiln.git
-cd kiln
+git clone https://github.com/penseive/pensieve.git
+cd pensieve
 bash scripts/bootstrap.sh
 
 # 2. Start Ollama
@@ -144,7 +146,7 @@ Open this directory as an Obsidian vault. Recommended plugins:
 ## Directory Structure
 
 ```
-kiln/
+pensieve/
 ├── raw/                 # Human-curated sources (LLM read-only)
 │   ├── articles/        # Web articles (.md via Clipper or ingest)
 │   ├── papers/          # Academic papers (.pdf -> .md)

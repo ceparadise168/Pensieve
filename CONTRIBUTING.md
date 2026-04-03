@@ -1,12 +1,12 @@
-# Contributing to Kiln
+# Contributing to Pensieve
 
 Thanks for your interest in contributing!
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/yourusername/kiln.git
-cd kiln
+git clone https://github.com/penseive/pensieve.git
+cd pensieve
 bash scripts/bootstrap.sh
 source .venv/bin/activate
 pytest tests/ -v  # make sure everything passes
