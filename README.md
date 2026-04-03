@@ -131,7 +131,8 @@ task_models:
 | Task | Model | Ollama name | Size | Notes |
 |------|-------|-------------|------|-------|
 | Fast (summarize, tag) | Qwen 2.5 3B | `qwen2.5:3b` | ~2GB | Best instruction-following at this size |
-| Main (articles, Q&A) | Qwen3 14B | `qwen3:14b` | ~12GB | Hybrid thinking mode, rivals GPT-4 for everyday tasks |
+| Main (articles, Q&A) | Gemma 4 | `gemma4` | ~10GB | Google's latest; strong writing and reasoning quality |
+| Main (alt) | Qwen3 14B | `qwen3:14b` | ~12GB | Hybrid thinking mode, rivals GPT-4 for everyday tasks |
 | Complex reasoning | DeepSeek-R1 32B | `deepseek-r1:32b` | ~24GB | Chain-of-thought reasoning with thinking tokens |
 | Embeddings | nomic-embed-text | `nomic-embed-text` | ~0.3GB | Surpasses OpenAI text-embedding-3-small |
 
@@ -140,8 +141,8 @@ task_models:
 | RAM | Recommended setup |
 |-----|-------------------|
 | 8GB | `qwen2.5:3b` only — use cloud fallback for complex tasks |
-| 16GB | `qwen2.5:3b` (fast) + `qwen3:14b` (main) + `nomic-embed-text` |
-| 32GB | Above + `deepseek-r1:32b` or `gemma3:27b` for complex reasoning |
+| 16GB | `qwen2.5:3b` (fast) + `gemma4` (main) + `nomic-embed-text` |
+| 32GB | Above + `deepseek-r1:32b` for complex reasoning |
 | 64GB+ | All local, no cloud needed — can run `qwen3:32b` comfortably |
 
 ## Obsidian Integration
