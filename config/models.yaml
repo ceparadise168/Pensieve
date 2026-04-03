@@ -1,0 +1,11 @@
+# Task → Model mapping
+task_models:
+  summarize: "local-fast"
+  compile_article: "local-main"
+  compile_index: "local-main"
+  query_simple: "local-main"
+  query_complex: "cloud-main"
+  lint: "local-main"
+  generate_slides: "local-main"
+  generate_chart: "local-fast"
+  embed: "local-embed"

@@ -1,0 +1,8 @@
+.venv/
+.env
+.compile_state.json
+.search_index.json
+node_modules/
+__pycache__/
+raw/repos/*/
+*.pyc

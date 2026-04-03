@@ -1,0 +1,25 @@
+[project]
+name = "llm-knowledge-base"
+version = "0.1.0"
+description = "A self-maintaining, LLM-compiled personal knowledge base"
+requires-python = ">=3.11"
+dependencies = [
+    "litellm",
+    "openai",
+    "anthropic",
+    "click",
+    "rich",
+    "pyyaml",
+    "python-frontmatter",
+    "beautifulsoup4",
+    "markdownify",
+    "matplotlib",
+    "requests",
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
