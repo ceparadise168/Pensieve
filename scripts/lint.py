@@ -24,18 +24,24 @@ RAW_DIR = PROJECT_ROOT / "raw"
 def check_broken_links() -> list[dict]:
     issues = []
     existing_slugs = {p.stem for p in (WIKI_DIR / "concepts").glob("*.md")}
+    # Also index wiki-level files (e.g. _index, _graph, _glossary)
+    wiki_files = {p.stem for p in WIKI_DIR.glob("*.md")}
     for md_file in WIKI_DIR.rglob("*.md"):
         content = md_file.read_text(encoding="utf-8")
         links = re.findall(r'\[\[([^\]|]+)', content)
         for link in links:
-            slug = link.strip().lower().replace(" ", "-")
-            if slug not in existing_slugs:
-                issues.append({
-                    "type": "broken_link",
-                    "file": str(md_file.relative_to(PROJECT_ROOT)),
-                    "link": link,
-                    "severity": "warning",
-                })
+            # Strip trailing backslash from escaped pipes in tables (\|)
+            raw = link.strip().rstrip("\\")
+            # Handle path-style links like "concepts/slug"
+            slug = raw.split("/")[-1].lower().replace(" ", "-")
+            if slug in existing_slugs or slug in wiki_files:
+                continue
+            issues.append({
+                "type": "broken_link",
+                "file": str(md_file.relative_to(PROJECT_ROOT)),
+                "link": raw,
+                "severity": "warning",
+            })
     return issues
 
 
@@ -81,6 +87,96 @@ def check_frontmatter() -> list[dict]:
     return issues
 
 
+def check_mermaid_syntax() -> list[dict]:
+    """Validate Mermaid code blocks in wiki files."""
+    issues = []
+    # Mermaid node IDs: only word chars (\w) and hyphens allowed
+    valid_node_id = re.compile(r'^[\w-]+$')
+
+    for md_file in WIKI_DIR.rglob("*.md"):
+        content = md_file.read_text(encoding="utf-8")
+        rel = str(md_file.relative_to(PROJECT_ROOT))
+
+        # Extract mermaid blocks
+        blocks = re.findall(r'```mermaid\n(.*?)```', content, re.DOTALL)
+        for block in blocks:
+            seen_edges = set()
+            for line_num, line in enumerate(block.strip().splitlines(), 1):
+                stripped = line.strip()
+                if not stripped or stripped.startswith("graph ") or stripped.startswith("%%"):
+                    continue
+
+                # Match edge lines: nodeA --> nodeB, with optional ["label"] on either side
+                edge_match = re.match(
+                    r'([\w-]+)(?:\["[^"]*"\])?\s*-->\s*([\w-]+)(?:\["([^"]*)"\])?\s*$', stripped
+                )
+                if not edge_match:
+                    # Check for common errors: bare names with spaces, unquoted labels
+                    if '-->' in stripped:
+                        issues.append({
+                            "type": "mermaid_syntax",
+                            "file": rel,
+                            "detail": f"Invalid edge syntax: {stripped}",
+                            "severity": "error",
+                        })
+                    continue
+
+                src, tgt, label = edge_match.groups()
+                if not valid_node_id.match(src):
+                    issues.append({
+                        "type": "mermaid_syntax",
+                        "file": rel,
+                        "detail": f"Invalid node ID: {src}",
+                        "severity": "error",
+                    })
+                if not valid_node_id.match(tgt):
+                    issues.append({
+                        "type": "mermaid_syntax",
+                        "file": rel,
+                        "detail": f"Invalid node ID: {tgt}",
+                        "severity": "error",
+                    })
+
+                edge_key = (src, tgt, label or "")
+                if edge_key in seen_edges:
+                    issues.append({
+                        "type": "mermaid_duplicate",
+                        "file": rel,
+                        "detail": f"Duplicate edge: {src} --> {tgt}",
+                        "severity": "warning",
+                    })
+                seen_edges.add(edge_key)
+    return issues
+
+
+def check_plugin_dependencies() -> list[dict]:
+    """Check for syntax that requires uninstalled Obsidian plugins."""
+    issues = []
+    plugins_dir = PROJECT_ROOT / ".obsidian" / "plugins"
+    installed_plugins = set()
+    if plugins_dir.is_dir():
+        installed_plugins = {p.name for p in plugins_dir.iterdir() if p.is_dir()}
+
+    # Map: code block language -> required plugin name
+    plugin_blocks = {
+        "dataview": "dataview",
+        "dataviewjs": "dataview",
+    }
+
+    for md_file in WIKI_DIR.rglob("*.md"):
+        content = md_file.read_text(encoding="utf-8")
+        rel = str(md_file.relative_to(PROJECT_ROOT))
+        for lang, plugin in plugin_blocks.items():
+            if f"```{lang}" in content and plugin not in installed_plugins:
+                issues.append({
+                    "type": "missing_plugin",
+                    "file": rel,
+                    "detail": f"Uses ```{lang}``` but '{plugin}' plugin is not installed",
+                    "severity": "error",
+                })
+    return issues
+
+
 def suggest_improvements() -> list[dict]:
     articles = []
     for md_file in (WIKI_DIR / "concepts").glob("*.md"):
@@ -118,6 +214,26 @@ Return ONLY the JSON array."""
         return [{"suggestion_type": "error", "description": "Failed to parse suggestions"}]
 
 
+def _issue_detail(issue: dict) -> str:
+    """Extract the most relevant detail string from an issue dict."""
+    return issue.get("detail", issue.get("link", issue.get("field", issue.get("error", ""))))
+
+
+def run_checks() -> list[dict]:
+    """Run all lint checks and return issues. Used by compile.py for post-compile validation."""
+    checks = [
+        ("internal links", check_broken_links),
+        ("orphaned articles", check_orphaned_articles),
+        ("frontmatter", check_frontmatter),
+        ("mermaid syntax", check_mermaid_syntax),
+        ("plugin dependencies", check_plugin_dependencies),
+    ]
+    all_issues = []
+    for name, fn in checks:
+        all_issues.extend(fn())
+    return all_issues
+
+
 @click.command()
 @click.option("--check", is_flag=True, help="Run all checks and report")
 @click.option("--fix", is_flag=True, help="Auto-fix issues where possible")
@@ -130,22 +246,19 @@ def lint(check: bool, fix: bool, suggest: bool):
     all_issues = []
 
     if check or fix:
+        checks = [
+            ("internal links", check_broken_links),
+            ("orphaned articles", check_orphaned_articles),
+            ("frontmatter", check_frontmatter),
+            ("mermaid syntax", check_mermaid_syntax),
+            ("plugin dependencies", check_plugin_dependencies),
+        ]
         click.echo("Running health checks...\n")
-
-        click.echo("[1/3] Checking internal links...")
-        issues = check_broken_links()
-        all_issues.extend(issues)
-        click.echo(f"  Found {len(issues)} broken links")
-
-        click.echo("[2/3] Checking for orphaned articles...")
-        issues = check_orphaned_articles()
-        all_issues.extend(issues)
-        click.echo(f"  Found {len(issues)} orphaned articles")
-
-        click.echo("[3/3] Checking frontmatter...")
-        issues = check_frontmatter()
-        all_issues.extend(issues)
-        click.echo(f"  Found {len(issues)} frontmatter issues")
+        for i, (name, fn) in enumerate(checks, 1):
+            click.echo(f"[{i}/{len(checks)}] Checking {name}...")
+            issues = fn()
+            all_issues.extend(issues)
+            click.echo(f"  Found {len(issues)} issues")
 
         errors = [i for i in all_issues if i["severity"] == "error"]
         warnings = [i for i in all_issues if i["severity"] == "warning"]
@@ -155,7 +268,7 @@ def lint(check: bool, fix: bool, suggest: bool):
 
         for issue in all_issues:
             icon = {"error": "✗", "warning": "⚠", "info": "ℹ"}.get(issue["severity"], "?")
-            click.echo(f"  {icon} [{issue['type']}] {issue.get('file', '')} — {issue.get('link', issue.get('field', issue.get('error', '')))}")
+            click.echo(f"  {icon} [{issue['type']}] {issue.get('file', '')} — {_issue_detail(issue)}")
 
     if fix:
         click.echo("\nAuto-fixing issues...")

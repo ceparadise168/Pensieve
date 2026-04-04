@@ -1,6 +1,9 @@
 """Tests for wiki linter checks (no LLM calls needed)."""
 
-from lint import check_broken_links, check_orphaned_articles, check_frontmatter
+from lint import (
+    check_broken_links, check_orphaned_articles, check_frontmatter,
+    check_mermaid_syntax, check_plugin_dependencies,
+)
 
 
 def test_broken_links_detects_missing(tmp_path, monkeypatch):
@@ -67,3 +70,76 @@ def test_frontmatter_missing_fields(tmp_path, monkeypatch):
     assert "tags" in missing_fields
     assert "created" in missing_fields
     assert "status" in missing_fields
+
+
+def test_mermaid_valid_syntax(tmp_path, monkeypatch):
+    import lint
+    monkeypatch.setattr(lint, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(lint, "WIKI_DIR", tmp_path / "wiki")
+
+    wiki = tmp_path / "wiki"
+    wiki.mkdir(parents=True)
+    (wiki / "graph.md").write_text(
+        '```mermaid\ngraph LR\n    a --> b["Label"]\n    a --> c\n```'
+    )
+    issues = check_mermaid_syntax()
+    assert len(issues) == 0
+
+
+def test_mermaid_detects_bare_spaces(tmp_path, monkeypatch):
+    import lint
+    monkeypatch.setattr(lint, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(lint, "WIKI_DIR", tmp_path / "wiki")
+
+    wiki = tmp_path / "wiki"
+    wiki.mkdir(parents=True)
+    (wiki / "graph.md").write_text(
+        '```mermaid\ngraph LR\n    a --> Knowledge Graph\n```'
+    )
+    issues = check_mermaid_syntax()
+    assert any(i["type"] == "mermaid_syntax" for i in issues)
+
+
+def test_mermaid_detects_duplicates(tmp_path, monkeypatch):
+    import lint
+    monkeypatch.setattr(lint, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(lint, "WIKI_DIR", tmp_path / "wiki")
+
+    wiki = tmp_path / "wiki"
+    wiki.mkdir(parents=True)
+    (wiki / "graph.md").write_text(
+        '```mermaid\ngraph LR\n    a --> b["X"]\n    a --> b["X"]\n```'
+    )
+    issues = check_mermaid_syntax()
+    assert any(i["type"] == "mermaid_duplicate" for i in issues)
+
+
+def test_plugin_dependency_detected(tmp_path, monkeypatch):
+    import lint
+    monkeypatch.setattr(lint, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(lint, "WIKI_DIR", tmp_path / "wiki")
+
+    wiki = tmp_path / "wiki"
+    wiki.mkdir(parents=True)
+    # No .obsidian/plugins/dataview directory
+    (tmp_path / ".obsidian").mkdir()
+    (wiki / "dashboard.md").write_text("# Dashboard\n```dataview\nLIST FROM *\n```")
+
+    issues = check_plugin_dependencies()
+    assert len(issues) == 1
+    assert issues[0]["type"] == "missing_plugin"
+    assert "dataview" in issues[0]["detail"]
+
+
+def test_plugin_dependency_ok_when_installed(tmp_path, monkeypatch):
+    import lint
+    monkeypatch.setattr(lint, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(lint, "WIKI_DIR", tmp_path / "wiki")
+
+    wiki = tmp_path / "wiki"
+    wiki.mkdir(parents=True)
+    (tmp_path / ".obsidian" / "plugins" / "dataview").mkdir(parents=True)
+    (wiki / "dashboard.md").write_text("# Dashboard\n```dataview\nLIST FROM *\n```")
+
+    issues = check_plugin_dependencies()
+    assert len(issues) == 0

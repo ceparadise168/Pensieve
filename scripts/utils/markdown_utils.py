@@ -10,16 +10,19 @@ def html_to_markdown(html: str) -> str:
 
 
 def pdf_to_markdown(pdf_path: Path) -> str:
-    """Convert PDF to Markdown using pandoc."""
-    result = subprocess.run(
-        ["pandoc", str(pdf_path), "-t", "markdown", "--wrap=none"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    if result.returncode == 0:
-        return result.stdout
-    raise RuntimeError(f"pandoc failed: {result.stderr}")
+    """Convert PDF to Markdown using pymupdf."""
+    import pymupdf
+
+    doc = pymupdf.open(str(pdf_path))
+    pages = []
+    for page in doc:
+        text = page.get_text("text")
+        if text.strip():
+            pages.append(text)
+    doc.close()
+    if not pages:
+        raise RuntimeError(f"No text extracted from {pdf_path}")
+    return "\n\n---\n\n".join(pages)
 
 
 def find_relevant_files(

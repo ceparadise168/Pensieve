@@ -17,6 +17,7 @@ from pathlib import Path
 import frontmatter
 
 from utils.llm_client import ask, ask_with_context
+from lint import run_checks
 
 PROJECT_ROOT = Path(__file__).parent.parent
 RAW_DIR = PROJECT_ROOT / "raw"
@@ -293,12 +294,20 @@ def step_6_build_graph():
         "```mermaid",
         "graph LR",
     ]
+    seen_edges = set()
     for source, targets in graph.items():
         for target in targets:
             # Slugify for valid Mermaid node IDs
             target_id = re.sub(r'[^\w-]', '', target.strip().lower().replace(" ", "-"))
-            if target_id:
-                lines.append(f"    {source} --> {target_id}[\"{target}\"]")
+            if not target_id:
+                continue
+            edge_key = (source, target_id)
+            if edge_key in seen_edges:
+                continue
+            seen_edges.add(edge_key)
+            # Escape quotes in label to prevent Mermaid parse errors
+            safe_label = target.strip().replace('"', '#quot;')
+            lines.append(f'    {source} --> {target_id}["{safe_label}"]')
     lines.append("```")
     lines.append("")
     lines.append("## Adjacency List")
@@ -310,6 +319,91 @@ def step_6_build_graph():
 
     (WIKI_DIR / "_graph.md").write_text("\n".join(lines), encoding="utf-8")
     click.echo(f"  Graph updated: {len(graph)} nodes")
+
+
+def step_7_build_dashboard():
+    """Build a static dashboard — no Dataview plugin required."""
+    articles = []
+    for md_file in sorted((WIKI_DIR / "concepts").glob("*.md")):
+        try:
+            post = frontmatter.load(md_file)
+            articles.append({
+                "slug": md_file.stem,
+                "title": post.get("title", md_file.stem),
+                "tags": post.get("tags", []),
+                "status": post.get("status", "draft"),
+                "updated": str(post.get("updated", post.get("created", ""))),
+            })
+        except Exception:
+            articles.append({
+                "slug": md_file.stem, "title": md_file.stem,
+                "tags": [], "status": "unknown", "updated": "",
+            })
+
+    # Sort by updated date descending
+    articles.sort(key=lambda a: a["updated"], reverse=True)
+
+    lines = [
+        "---",
+        "title: 'Knowledge Base Dashboard'",
+        f"updated: '{datetime.now().strftime('%Y-%m-%d')}'",
+        "---",
+        "",
+        "# Knowledge Base Dashboard",
+        "",
+        "## Recent Articles",
+        "",
+        "| Article | Status | Updated |",
+        "|---------|--------|---------|",
+    ]
+    for a in articles[:20]:
+        lines.append(f"| [[concepts/{a['slug']}|{a['title']}]] | {a['status']} | {a['updated']} |")
+
+    # Draft / stub sections
+    drafts = [a for a in articles if a["status"] in ("draft", "stub")]
+    if drafts:
+        lines += ["", "## Drafts & Stubs", ""]
+        for a in drafts:
+            lines.append(f"- [[concepts/{a['slug']}|{a['title']}]] ({a['status']})")
+
+    # Tag cloud
+    tag_map: dict[str, list] = {}
+    for a in articles:
+        for tag in a.get("tags", []):
+            tag_map.setdefault(tag, []).append(a)
+    if tag_map:
+        lines += ["", "## Tags", ""]
+        for tag in sorted(tag_map, key=lambda t: len(tag_map[t]), reverse=True):
+            article_links = ", ".join(
+                f"[[concepts/{a['slug']}|{a['title']}]]" for a in tag_map[tag]
+            )
+            lines.append(f"- `#{tag}` ({len(tag_map[tag])}) — {article_links}")
+
+    lines += [
+        "", "## Navigation", "",
+        "- [[_index|Wiki Index]]",
+        "- [[_graph|Concept Graph]]",
+        "- [[_glossary|Glossary]]",
+    ]
+
+    (WIKI_DIR / "_dashboard.md").write_text("\n".join(lines), encoding="utf-8")
+    click.echo(f"  Dashboard updated: {len(articles)} articles")
+
+
+def step_8_post_compile_lint() -> bool:
+    """Run lint checks after compilation. Returns True if no errors found."""
+    issues = run_checks()
+    errors = [i for i in issues if i["severity"] == "error"]
+    warnings = [i for i in issues if i["severity"] == "warning"]
+    if errors or warnings:
+        click.echo(f"\n  {len(errors)} errors, {len(warnings)} warnings")
+        for issue in errors + warnings:
+            icon = "✗" if issue["severity"] == "error" else "⚠"
+            detail = issue.get("detail", issue.get("link", issue.get("field", "")))
+            click.echo(f"    {icon} [{issue['type']}] {issue.get('file', '')} — {detail}")
+    else:
+        click.echo("  All checks passed")
+    return len(errors) == 0
 
 
 @click.command()
@@ -344,7 +438,7 @@ def compile_wiki(full: bool, article: str):
             return
         click.echo(f"Incremental compile: {len(sources)} changed files")
 
-    click.echo("\n[Step 1/6] Summarizing sources...")
+    click.echo("\n[Step 1/8] Summarizing sources...")
     summaries = step_1_summarize_sources(sources)
 
     # Save state after summarization so successful work is not lost
@@ -352,24 +446,33 @@ def compile_wiki(full: bool, article: str):
         state["file_hashes"].update(new_hashes)
         _save_state(state)
 
-    click.echo("\n[Step 2/6] Extracting concepts...")
+    click.echo("\n[Step 2/8] Extracting concepts...")
     concepts = step_2_extract_concepts(summaries)
     click.echo(f"  Found {len(concepts)} concepts")
 
-    click.echo("\n[Step 3/6] Writing concept articles...")
+    click.echo("\n[Step 3/8] Writing concept articles...")
     step_3_write_concept_articles(concepts)
 
-    click.echo("\n[Step 4/6] Building index...")
+    click.echo("\n[Step 4/8] Building index...")
     step_4_build_index()
 
-    click.echo("\n[Step 5/6] Building glossary...")
+    click.echo("\n[Step 5/8] Building glossary...")
     step_5_build_glossary()
 
-    click.echo("\n[Step 6/6] Building concept graph...")
+    click.echo("\n[Step 6/8] Building concept graph...")
     step_6_build_graph()
 
+    click.echo("\n[Step 7/8] Building dashboard...")
+    step_7_build_dashboard()
+
+    click.echo("\n[Step 8/8] Post-compile validation...")
+    passed = step_8_post_compile_lint()
+
     _save_state(state)
-    click.echo(f"\nCompilation complete. Wiki: {WIKI_DIR}")
+    if passed:
+        click.echo(f"\nCompilation complete. Wiki: {WIKI_DIR}")
+    else:
+        click.echo(f"\nCompilation complete with issues. Run `kb lint --fix` to auto-repair.")
 
 
 if __name__ == "__main__":
