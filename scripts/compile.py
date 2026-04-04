@@ -55,6 +55,37 @@ def _get_changed_files(state: dict) -> tuple[list[Path], dict[str, str]]:
     return changed, new_hashes
 
 
+def step_0_mirror_sources(sources: list[Path]):
+    """Mirror raw/ files into wiki/sources/ so the vault is self-contained."""
+    sources_dir = WIKI_DIR / "sources"
+    sources_dir.mkdir(parents=True, exist_ok=True)
+    for src in sources:
+        try:
+            content = src.read_text(encoding="utf-8")
+            rel_path = str(src.relative_to(PROJECT_ROOT))
+            # Preserve subdirectory structure: raw/articles/foo.md → wiki/sources/articles/foo.md
+            sub_path = src.relative_to(RAW_DIR)
+            dest = sources_dir / sub_path
+            dest.parent.mkdir(parents=True, exist_ok=True)
+
+            # Check if raw file already has frontmatter
+            if content.startswith("---"):
+                dest.write_text(content, encoding="utf-8")
+            else:
+                fm = (
+                    f"---\n"
+                    f"title: '{src.stem}'\n"
+                    f"original_path: '{rel_path}'\n"
+                    f"mirrored: '{datetime.now().strftime('%Y-%m-%d')}'\n"
+                    f"type: source\n"
+                    f"---\n\n"
+                )
+                dest.write_text(fm + content, encoding="utf-8")
+            click.echo(f"  Mirrored: {rel_path}")
+        except Exception as e:
+            click.echo(f"  ERROR mirroring {src.name}: {e}", err=True)
+
+
 def step_1_summarize_sources(sources: list[Path]) -> list[dict]:
     summaries = []
     for src in sources:
@@ -71,9 +102,12 @@ def step_1_summarize_sources(sources: list[Path]) -> list[dict]:
             slug = src.stem
             summary_path = WIKI_DIR / "summaries" / f"{slug}.md"
             summary_path.parent.mkdir(parents=True, exist_ok=True)
+            # Link to mirrored source within wiki vault
+            source_link = str(Path("sources") / src.relative_to(RAW_DIR))
             summary_path.write_text(
                 f"---\ntitle: 'Summary: {slug}'\n"
-                f"source: '{rel_path}'\n"
+                f"source: '{source_link}'\n"
+                f"original_raw: '{rel_path}'\n"
                 f"compiled: '{datetime.now().strftime('%Y-%m-%d')}'\n"
                 f"type: summary\n---\n\n{summary}",
                 encoding="utf-8",
@@ -174,7 +208,7 @@ Requirements:
 - Write a clear introduction paragraph
 - Organize into logical sections with ## headings
 - Include a ## Related section with wiki-links to potentially related concepts
-- Include a ## Sources section linking back to raw/ files
+- Include a ## Sources section linking back to source files in sources/
 - Be thorough but concise. Target 500-1500 words.
 - Use wiki-style internal links: [[concept-slug]]"""
 
@@ -438,7 +472,10 @@ def compile_wiki(full: bool, article: str):
             return
         click.echo(f"Incremental compile: {len(sources)} changed files")
 
-    click.echo("\n[Step 1/8] Summarizing sources...")
+    click.echo("\n[Step 0/9] Mirroring sources into wiki/sources/...")
+    step_0_mirror_sources(sources)
+
+    click.echo("\n[Step 1/9] Summarizing sources...")
     summaries = step_1_summarize_sources(sources)
 
     # Save state after summarization so successful work is not lost
@@ -446,26 +483,26 @@ def compile_wiki(full: bool, article: str):
         state["file_hashes"].update(new_hashes)
         _save_state(state)
 
-    click.echo("\n[Step 2/8] Extracting concepts...")
+    click.echo("\n[Step 2/9] Extracting concepts...")
     concepts = step_2_extract_concepts(summaries)
     click.echo(f"  Found {len(concepts)} concepts")
 
-    click.echo("\n[Step 3/8] Writing concept articles...")
+    click.echo("\n[Step 3/9] Writing concept articles...")
     step_3_write_concept_articles(concepts)
 
-    click.echo("\n[Step 4/8] Building index...")
+    click.echo("\n[Step 4/9] Building index...")
     step_4_build_index()
 
-    click.echo("\n[Step 5/8] Building glossary...")
+    click.echo("\n[Step 5/9] Building glossary...")
     step_5_build_glossary()
 
-    click.echo("\n[Step 6/8] Building concept graph...")
+    click.echo("\n[Step 6/9] Building concept graph...")
     step_6_build_graph()
 
-    click.echo("\n[Step 7/8] Building dashboard...")
+    click.echo("\n[Step 7/9] Building dashboard...")
     step_7_build_dashboard()
 
-    click.echo("\n[Step 8/8] Post-compile validation...")
+    click.echo("\n[Step 8/9] Post-compile validation...")
     passed = step_8_post_compile_lint()
 
     _save_state(state)

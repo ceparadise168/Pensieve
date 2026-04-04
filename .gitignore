@@ -42,6 +42,9 @@ wiki/_graph.md
 !wiki/_dashboard.md
 output/
 
+# Playwright MCP
+.playwright-mcp/
+
 # OS
 .DS_Store
 Thumbs.db
