@@ -13,6 +13,9 @@ package-lock.json
 # Environment / secrets
 .env
 
+# Data repo (version control for personal KB data)
+.data-repo/
+
 # Kiln runtime state
 .compile_state.json
 .search_index.json

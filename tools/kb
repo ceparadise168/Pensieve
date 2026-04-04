@@ -35,6 +35,21 @@ case "$COMMAND" in
     serve)
         python "$PROJECT_ROOT/scripts/search.py" --serve "$@"
         ;;
+    remove)
+        python "$PROJECT_ROOT/scripts/remove.py" "$@"
+        ;;
+    snapshot)
+        python "$PROJECT_ROOT/scripts/data_repo.py" snapshot "$@"
+        ;;
+    history)
+        python "$PROJECT_ROOT/scripts/data_repo.py" history "$@"
+        ;;
+    undo)
+        python "$PROJECT_ROOT/scripts/data_repo.py" undo "$@"
+        ;;
+    restore)
+        python "$PROJECT_ROOT/scripts/data_repo.py" restore "$@"
+        ;;
     status)
         echo "=== Knowledge Base Status ==="
         echo "Raw sources:  $(find "$PROJECT_ROOT/raw" -name '*.md' | wc -l) files"
@@ -56,6 +71,13 @@ case "$COMMAND" in
         echo "  search 'terms' [--semantic]     Search the wiki"
         echo "  serve [--port 8080]             Start search web UI"
         echo "  status                          Show knowledge base stats"
+        echo ""
+        echo "Data management:"
+        echo "  remove <slug|source> [--dry-run] [-y]  Remove by slug or raw source path"
+        echo "  snapshot 'message'         Create a named data snapshot"
+        echo "  history [n]                Show snapshot history"
+        echo "  undo                       Revert the last data operation"
+        echo "  restore <hash>             Restore data to a specific snapshot"
         ;;
     *)
         echo "Unknown command: $COMMAND"

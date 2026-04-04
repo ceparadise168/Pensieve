@@ -5,7 +5,7 @@ Pensieve is a self-maintaining, LLM-compiled personal knowledge base.
 Human curates sources into `raw/`. LLM compiles `wiki/`. Human reads in Obsidian.
 
 ## Key rules
-- NEVER modify files in `raw/` (except via ingest script adding new files)
+- NEVER modify files in `raw/` (except via ingest script or `kb remove`)
 - `wiki/` is LLM-owned: all edits go through `scripts/compile.py`
 - Always update `wiki/_index.md` when adding/removing wiki articles
 - Maintain backlinks: if article A references B, B should link back to A
@@ -18,6 +18,11 @@ Human curates sources into `raw/`. LLM compiles `wiki/`. Human reads in Obsidian
 - `./tools/kb query "question"` — Ask a question against the wiki
 - `./tools/kb lint` — Run health checks on the wiki
 - `./tools/kb search "term"` — Search the wiki
+- `./tools/kb remove <slug|source> [--dry-run] [-y]` — Remove by slug or raw source path
+- `./tools/kb snapshot "message"` — Create a named data snapshot
+- `./tools/kb history [n]` — Show snapshot history
+- `./tools/kb undo` — Revert the last data operation
+- `./tools/kb restore <hash>` — Restore data to a specific snapshot
 
 ## LLM backend
 - Primary: Ollama (local) via LiteLLM router
