@@ -79,6 +79,12 @@ ollama serve
 | `kb search --rebuild-index` | Rebuild keyword and embedding indexes |
 | `kb serve` | Start the search web UI on localhost:8080 |
 | `kb status` | Show knowledge base stats |
+| `kb remove <slug>` | Remove a concept article and clean up backlinks |
+| `kb remove <source-path>` | Remove a raw source and all its derived content |
+| `kb snapshot "message"` | Create a named data snapshot |
+| `kb history` | Show data snapshot history |
+| `kb undo` | Revert the last data operation |
+| `kb restore <hash>` | Restore data to a specific snapshot |
 
 ## Architecture
 
@@ -103,13 +109,15 @@ ollama serve
 
 **LLM Router:** Uses [LiteLLM](https://github.com/BerriAI/litellm) Router in-process for automatic retries, fallbacks, and model selection per task type.
 
-**Compile Pipeline (6 steps):**
+**Compile Pipeline (8 steps):**
 1. Summarize each raw source
 2. Extract key concepts across all summaries
 3. Write/update a wiki article per concept
 4. Build master index (grouped by tags)
 5. Build glossary
 6. Build concept relationship graph (Mermaid)
+7. Build dashboard (static, no Dataview plugin required)
+8. Post-compile lint validation
 
 ## LLM Configuration
 
@@ -149,7 +157,7 @@ task_models:
 
 Open this directory as an Obsidian vault. Recommended plugins:
 
-- **Dataview** -- Dynamic queries over wiki articles (dashboard included at `wiki/_dashboard.md`)
+- **Dataview** -- Dynamic queries over wiki articles (static dashboard at `wiki/_dashboard.md` works without it)
 - **Marp Slides** -- Preview generated slide decks
 - **Graph Analysis** -- Visualize concept relationships
 - **Obsidian Git** -- Auto-backup wiki changes
@@ -170,14 +178,15 @@ pensieve/
 │   ├── _index.md        # Master index
 │   ├── _glossary.md     # Term definitions
 │   ├── _graph.md        # Concept relationship map
-│   └── _dashboard.md    # Obsidian Dataview dashboard
+│   └── _dashboard.md    # Static dashboard (no Dataview required)
 ├── output/              # Query results
 │   ├── reports/         # Long-form analysis
 │   ├── slides/          # Marp slide decks
 │   └── charts/          # Visualizations
 ├── scripts/             # Python automation
 ├── tools/kb             # CLI entry point
-└── config/              # LLM and system configuration
+├── config/              # LLM and system configuration
+└── .data-repo/          # Bare git repo for KB data versioning (auto-created)
 ```
 
 ## Requirements
