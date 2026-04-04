@@ -6,15 +6,15 @@ model_list:
     litellm_params:
       model: "ollama/gemma4"
       api_base: "http://localhost:11434"
-      timeout: 120
-      stream: true
+      timeout: 300
+      stream: false
 
   - model_name: "local-fast"
     litellm_params:
-      model: "ollama/qwen2.5:3b"
+      model: "ollama/gemma4"
       api_base: "http://localhost:11434"
-      timeout: 60
-      stream: true
+      timeout: 300
+      stream: false
 
   - model_name: "local-embed"
     litellm_params:
@@ -37,6 +37,6 @@ model_list:
 router_settings:
   routing_strategy: "simple-shuffle"
   num_retries: 2
-  timeout: 120
+  timeout: 300
   allowed_fails: 3
   cooldown_time: 60
